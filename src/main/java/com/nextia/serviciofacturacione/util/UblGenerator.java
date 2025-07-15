@@ -7,6 +7,7 @@ import com.nextia.serviciofacturacione.model.NotaDebito;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -321,13 +322,106 @@ public class UblGenerator {
         parent.appendChild(documentCurrencyCode);
     }
     
+    @Value("${emisor.tipoDocumento}")
+    private String emisorTipoDocumento;
+    
+    @Value("${emisor.ruc}")
+    private String emisorRuc;
+    
+    @Value("${emisor.razonSocial}")
+    private String emisorRazonSocial;
+    
+    @Value("${emisor.nombreComercial}")
+    private String emisorNombreComercial;
+    
+    @Value("${emisor.direccion}")
+    private String emisorDireccion;
+    
+    @Value("${emisor.pais}")
+    private String emisorPais;
+    
+    @Value("${emisor.departamento}")
+    private String emisorDepartamento;
+    
+    @Value("${emisor.provincia}")
+    private String emisorProvincia;
+    
+    @Value("${emisor.distrito}")
+    private String emisorDistrito;
+    
+    @Value("${emisor.ubigeo}")
+    private String emisorUbigeo;
+    
     private void addSupplierPartyElement(Document doc, Element parent, Object emisor) {
-        // Implementación simplificada - en un caso real se extraerían los datos del emisor
         Element accountingSupplierParty = doc.createElementNS("urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2", "cac:AccountingSupplierParty");
         parent.appendChild(accountingSupplierParty);
         
-        // Aquí se agregarían todos los elementos del emisor según UBL 2.1
-        // Por simplicidad, solo se muestra la estructura básica
+        // Party
+        Element party = doc.createElementNS("urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2", "cac:Party");
+        accountingSupplierParty.appendChild(party);
+        
+        // PartyIdentification
+        Element partyIdentification = doc.createElementNS("urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2", "cac:PartyIdentification");
+        party.appendChild(partyIdentification);
+        
+        Element id = doc.createElementNS("urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2", "cbc:ID");
+        id.setAttribute("schemeID", emisorTipoDocumento);
+        id.setTextContent(emisorRuc);
+        partyIdentification.appendChild(id);
+        
+        // PartyName
+        Element partyName = doc.createElementNS("urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2", "cac:PartyName");
+        party.appendChild(partyName);
+        
+        Element name = doc.createElementNS("urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2", "cbc:Name");
+        name.setTextContent(emisorNombreComercial);
+        partyName.appendChild(name);
+        
+        // PartyLegalEntity
+        Element partyLegalEntity = doc.createElementNS("urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2", "cac:PartyLegalEntity");
+        party.appendChild(partyLegalEntity);
+        
+        Element registrationName = doc.createElementNS("urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2", "cbc:RegistrationName");
+        registrationName.setTextContent(emisorRazonSocial);
+        partyLegalEntity.appendChild(registrationName);
+        
+        // RegistrationAddress
+        Element registrationAddress = doc.createElementNS("urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2", "cac:RegistrationAddress");
+        partyLegalEntity.appendChild(registrationAddress);
+        
+        Element addressId = doc.createElementNS("urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2", "cbc:ID");
+        addressId.setTextContent(emisorUbigeo);
+        registrationAddress.appendChild(addressId);
+        
+        Element addressTypeCode = doc.createElementNS("urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2", "cbc:AddressTypeCode");
+        addressTypeCode.setTextContent("0000");
+        registrationAddress.appendChild(addressTypeCode);
+        
+        Element cityName = doc.createElementNS("urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2", "cbc:CityName");
+        cityName.setTextContent(emisorProvincia);
+        registrationAddress.appendChild(cityName);
+        
+        Element countrySubentity = doc.createElementNS("urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2", "cbc:CountrySubentity");
+        countrySubentity.setTextContent(emisorDepartamento);
+        registrationAddress.appendChild(countrySubentity);
+        
+        Element district = doc.createElementNS("urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2", "cbc:District");
+        district.setTextContent(emisorDistrito);
+        registrationAddress.appendChild(district);
+        
+        Element addressLine = doc.createElementNS("urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2", "cac:AddressLine");
+        registrationAddress.appendChild(addressLine);
+        
+        Element line = doc.createElementNS("urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2", "cbc:Line");
+        line.setTextContent(emisorDireccion);
+        addressLine.appendChild(line);
+        
+        Element country = doc.createElementNS("urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2", "cac:Country");
+        registrationAddress.appendChild(country);
+        
+        Element identificationCode = doc.createElementNS("urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2", "cbc:IdentificationCode");
+        identificationCode.setTextContent(emisorPais);
+        country.appendChild(identificationCode);
     }
     
     private void addCustomerPartyElement(Document doc, Element parent, Object receptor) {

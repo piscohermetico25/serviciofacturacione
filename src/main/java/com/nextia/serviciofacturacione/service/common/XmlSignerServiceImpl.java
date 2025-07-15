@@ -2,7 +2,10 @@ package com.nextia.serviciofacturacione.service.common;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -26,7 +29,7 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.FileInputStream;
+import java.io.InputStream;
 
 import java.security.KeyStore;
 import java.security.PrivateKey;
@@ -51,6 +54,9 @@ public class XmlSignerServiceImpl implements XmlSignerService {
     
     @Value("${sunat.certificado.alias}")
     private String aliasCertificado;
+    
+    @Autowired
+    private ResourceLoader resourceLoader;
 
     @Override
     public byte[] firmarXml(byte[] xml, PrivateKey clavePrivada, X509Certificate certificado) {
@@ -148,8 +154,9 @@ public class XmlSignerServiceImpl implements XmlSignerService {
             
             // Cargar el certificado y la clave privada desde el keystore
             KeyStore ks = KeyStore.getInstance("PKCS12");
-            try (FileInputStream fis = new FileInputStream(rutaCertificado)) {
-                ks.load(fis, passwordCertificado.toCharArray());
+            Resource resource = resourceLoader.getResource(rutaCertificado);
+            try (InputStream is = resource.getInputStream()) {
+                ks.load(is, passwordCertificado.toCharArray());
             }
             
             PrivateKey privateKey = (PrivateKey) ks.getKey(aliasCertificado, passwordCertificado.toCharArray());

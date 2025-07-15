@@ -69,8 +69,8 @@ public class FacturaServiceImpl implements FacturaService {
             String nombreArchivo = generarNombreArchivo(ruc, TIPO_DOCUMENTO, factura.getSerie(), factura.getCorrelativo());
             byte[] zip = zipCompressorService.comprimirXml(nombreArchivo + ".xml", xmlFirmado);
             
-            // Paso 4: Enviar ZIP a SUNAT
-            byte[] cdrZip = sunatSenderService.enviarArchivo(nombreArchivo + ".zip", zip, ruc, usuarioSol, claveSol);
+            // Paso 4: Enviar ZIP a SUNAT (usando credenciales inyectadas)
+            byte[] cdrZip = sunatSenderService.enviarArchivo(nombreArchivo + ".zip", zip);
             
             // Paso 5: Procesar ZIP de CDR
             CdrResponse respuesta = cdrProcessorService.procesarZip(cdrZip);
@@ -89,8 +89,8 @@ public class FacturaServiceImpl implements FacturaService {
                                       String usuarioSol, String claveSol) {
         try {
             log.info("Consultando estado de factura: {}-{}", serie, numero);
-            byte[] respuestaBytes = sunatSenderService.consultarEstado(ruc, tipoDocumento, serie, numero, 
-                                                                      usuarioSol, claveSol);
+            // Usar método actualizado con credenciales inyectadas
+            byte[] respuestaBytes = sunatSenderService.consultarEstado(tipoDocumento, serie, numero);
             CdrResponse respuesta = cdrProcessorService.procesarXml(respuestaBytes);
             log.info("Consulta de estado de factura {}-{} completada. Respuesta SUNAT: {}", 
                     serie, numero, respuesta.getCodigo());
