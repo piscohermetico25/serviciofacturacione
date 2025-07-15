@@ -3,7 +3,7 @@ package com.nextia.serviciofacturacione.service.nota;
 import com.nextia.serviciofacturacione.model.CdrResponse;
 import com.nextia.serviciofacturacione.model.NotaCredito;
 import com.nextia.serviciofacturacione.service.common.CdrProcessorService;
-import com.nextia.serviciofacturacione.service.common.SunatSenderService;
+import com.nextia.serviciofacturacione.service.sunat.SunatSenderService;
 import com.nextia.serviciofacturacione.service.common.XmlSignerService;
 import com.nextia.serviciofacturacione.service.common.ZipCompressorService;
 import com.nextia.serviciofacturacione.util.UblGenerator;

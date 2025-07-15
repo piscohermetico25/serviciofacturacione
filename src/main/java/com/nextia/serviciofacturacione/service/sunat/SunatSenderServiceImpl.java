@@ -1,9 +1,10 @@
 package com.nextia.serviciofacturacione.service.sunat;
 
 import com.nextia.serviciofacturacione.exception.FacturacionException;
-import com.nextia.serviciofacturacione.service.common.SunatSenderService;
+import com.nextia.serviciofacturacione.service.sunat.SunatSenderService;
 import com.nextia.serviciofacturacione.service.sunat.client.PasswordCallbackHandler;
-import com.nextia.serviciofacturacione.service.sunat.client.SunatBillService;
+import com.nextia.serviciofacturacione.service.sunat.client.generated.BillService;
+import com.nextia.serviciofacturacione.service.sunat.client.generated.StatusResponse;
 
 import org.apache.cxf.endpoint.Client;
 import org.apache.cxf.frontend.ClientProxy;
@@ -18,7 +19,11 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
+import jakarta.activation.DataHandler;
+import jakarta.mail.util.ByteArrayDataSource;
 import jakarta.xml.ws.soap.SOAPFaultException;
+
+import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,41 +40,26 @@ public class SunatSenderServiceImpl implements SunatSenderService {
     private final String ruc;
     private final String usuarioSol;
     private final String claveSol;
+
+    
+    private final BillService billService;
     
     public SunatSenderServiceImpl(
             @Value("${sunat.service.url}") String sunatServiceUrl,
             @Value("${sunat.service.timeout}") int connectionTimeout,
             @Value("${sunat.ruc}") String ruc,
             @Value("${sunat.usuario.sol}") String usuarioSol,
-            @Value("${sunat.clave.sol}") String claveSol) {
+            @Value("${sunat.clave.sol}") String claveSol,
+            BillService billService) {
         this.sunatServiceUrl = sunatServiceUrl;
         this.connectionTimeout = connectionTimeout;
         this.ruc = ruc;
         this.usuarioSol = usuarioSol;
         this.claveSol = claveSol;
+        this.billService = billService;
     }
 
-    /**
-     * Crea y configura un cliente SOAP para los servicios de SUNAT
-     * 
-     * @return Servicio SOAP configurado
-     */
-    private SunatBillService crearClienteSoap() {
-        JaxWsProxyFactoryBean factory = new JaxWsProxyFactoryBean();
-        factory.setAddress(sunatServiceUrl);
-        factory.setServiceClass(SunatBillService.class);
-        
-        SunatBillService service = (SunatBillService) factory.create();
-        Client client = ClientProxy.getClient(service);
-        
-        // Configurar seguridad WS-Security usando credenciales inyectadas
-        configurarSeguridad(client, this.ruc + this.usuarioSol, this.claveSol);
-        
-        // Configurar timeout
-        configurarTimeout(client);
-        
-        return service;
-    }
+ 
     
     @Override
     public byte[] enviarArchivo(String nombreArchivo, byte[] contenidoZip) {
@@ -77,10 +67,10 @@ public class SunatSenderServiceImpl implements SunatSenderService {
             log.info("Enviando archivo {} a SUNAT", nombreArchivo);
             
             // Crear cliente SOAP
-            SunatBillService service = crearClienteSoap();
+
             
             // Enviar archivo a SUNAT
-            byte[] respuesta = service.sendBill(nombreArchivo, contenidoZip);
+            byte[] respuesta = billService.sendBill(nombreArchivo,  new DataHandler(new ByteArrayDataSource(contenidoZip, "application/zip")) , null);    
             
             log.info("Archivo {} enviado correctamente a SUNAT", nombreArchivo);
             return respuesta;
@@ -93,26 +83,27 @@ public class SunatSenderServiceImpl implements SunatSenderService {
         }
     }
 
-    /**
-     * Consulta el estado de un documento enviado a SUNAT
-     * 
-     * @deprecated Usar consultarCdr en su lugar según el manual del programador de SUNAT
-     */
+
     @Override
-    @Deprecated(since = "1.1.0", forRemoval = true)
     public byte[] consultarEstado(String tipoDocumento, String serie, String numero) {
         try {
             log.info("Consultando estado del documento {}-{}-{} en SUNAT", tipoDocumento, serie, numero);
             
-            // Crear cliente SOAP
-            SunatBillService service = crearClienteSoap();
-            
             // Consultar estado
             String nombreArchivo = ruc + "-" + tipoDocumento + "-" + serie + "-" + numero;
-            byte[] respuesta = service.getStatus(nombreArchivo);
+            StatusResponse respuesta = billService.getStatus(nombreArchivo);
             
             log.info("Estado del documento {}-{}-{} consultado correctamente", tipoDocumento, serie, numero);
-            return respuesta;
+            
+            // Convertir la respuesta a bytes - ajusta según la estructura real de StatusResponse
+            // Opción 1: Si tiene un método que devuelve byte[]
+            // return respuesta.getContent(); 
+            
+            // Opción 2: Si tiene un método que devuelve String
+            // return respuesta.getStatus().getBytes(StandardCharsets.UTF_8);
+            
+            // Opción 3: Convertir todo el objeto a bytes
+            return respuesta.getContent();
         } catch (SOAPFaultException e) {
             log.error("Error SOAP al consultar estado: {}", e.getMessage(), e);
             throw new FacturacionException("Error al consultar estado: " + e.getMessage(), e);
@@ -127,11 +118,9 @@ public class SunatSenderServiceImpl implements SunatSenderService {
         try {
             log.info("Enviando resumen {} a SUNAT", nombreArchivo);
             
-            // Crear cliente SOAP
-            SunatBillService service = crearClienteSoap();
             
             // Enviar resumen a SUNAT
-            String numeroTicket = service.sendSummary(nombreArchivo, contenidoZip);
+            String numeroTicket = billService.sendSummary(nombreArchivo, new DataHandler(new ByteArrayDataSource(contenidoZip, "application/zip")), null);
             
             log.info("Resumen {} enviado correctamente a SUNAT. Ticket: {}", nombreArchivo, numeroTicket);
             return numeroTicket;
@@ -149,14 +138,12 @@ public class SunatSenderServiceImpl implements SunatSenderService {
         try {
             log.info("Consultando ticket {} en SUNAT", numeroTicket);
             
-            // Crear cliente SOAP
-            SunatBillService service = crearClienteSoap();
             
             // Consultar ticket
-            byte[] respuesta = service.getStatus(numeroTicket);
+            StatusResponse respuesta = billService.getStatus(numeroTicket);
             
             log.info("Ticket {} consultado correctamente", numeroTicket);
-            return respuesta;
+            return respuesta.getContent();
         } catch (SOAPFaultException e) {
             log.error("Error SOAP al consultar ticket: {}", e.getMessage(), e);
             throw new FacturacionException("Error al consultar ticket: " + e.getMessage(), e);
@@ -166,47 +153,16 @@ public class SunatSenderServiceImpl implements SunatSenderService {
         }
     }
     
-    /**
-     * Configura la seguridad WS-Security para el cliente SOAP
-     * 
-     * @param client Cliente SOAP a configurar
-     * @param usuario Usuario para autenticación
-     * @param clave Clave para autenticación
-     */
-    private void configurarSeguridad(Client client, String usuario, String clave) {
-        Map<String, Object> outProps = new HashMap<>();
-        outProps.put(ConfigurationConstants.ACTION, ConfigurationConstants.USERNAME_TOKEN);
-        outProps.put(ConfigurationConstants.USER, usuario);
-        outProps.put(ConfigurationConstants.PASSWORD_TYPE, WSS4JConstants.PW_TEXT);
-        outProps.put(ConfigurationConstants.PW_CALLBACK_REF, new PasswordCallbackHandler(usuario, clave));
-        
-        WSS4JOutInterceptor wssOut = new WSS4JOutInterceptor(outProps);
-        client.getOutInterceptors().add(wssOut);
-    }
+
     
-    /**
-     * Configura el timeout para el cliente SOAP
-     * 
-     * @param client Cliente SOAP a configurar
-     */
-    private void configurarTimeout(Client client) {
-        HTTPConduit conduit = (HTTPConduit) client.getConduit();
-        HTTPClientPolicy policy = new HTTPClientPolicy();
-        policy.setConnectionTimeout(connectionTimeout);
-        policy.setReceiveTimeout(connectionTimeout);
-        conduit.setClient(policy);
-    }
-    
+
     @Override
     public String enviarLote(String nombreArchivo, byte[] contenidoZip) {
         try {
             log.info("Enviando lote {} a SUNAT", nombreArchivo);
             
-            // Crear cliente SOAP
-            SunatBillService service = crearClienteSoap();
-            
             // Enviar lote a SUNAT y obtener número de ticket
-            String numeroTicket = service.sendPack(nombreArchivo, contenidoZip);
+            String numeroTicket = billService.sendPack(nombreArchivo, new DataHandler(new ByteArrayDataSource(contenidoZip, "application/zip")), null);
             
             log.info("Lote {} enviado correctamente a SUNAT. Número de ticket: {}", nombreArchivo, numeroTicket);
             return numeroTicket;
@@ -224,14 +180,11 @@ public class SunatSenderServiceImpl implements SunatSenderService {
         try {
             log.info("Consultando CDR del documento {}-{}-{} en SUNAT", tipoDocumento, serie, numero);
             
-            // Crear cliente SOAP
-            SunatBillService service = crearClienteSoap();
-            
             // Consultar CDR
-            byte[] respuesta = service.getStatusCdr(ruc, tipoDocumento, serie, numero);
+            StatusResponse respuesta = billService.getStatus(numero);
             
             log.info("CDR del documento {}-{}-{} consultado correctamente", tipoDocumento, serie, numero);
-            return respuesta;
+            return respuesta.getContent();
         } catch (SOAPFaultException e) {
             log.error("Error SOAP al consultar CDR: {}", e.getMessage(), e);
             throw new FacturacionException("Error al consultar CDR: " + e.getMessage(), e);
@@ -246,14 +199,11 @@ public class SunatSenderServiceImpl implements SunatSenderService {
         try {
             log.info("Consultando estado AR del documento {}-{}-{} en SUNAT", tipoDocumento, serie, numero);
             
-            // Crear cliente SOAP
-            SunatBillService service = crearClienteSoap();
-            
             // Consultar estado AR
-            byte[] respuesta = service.getStatusAR(ruc, tipoDocumento, serie, numero);
+            StatusResponse respuesta = billService.getStatus(numero);
             
             log.info("Estado AR del documento {}-{}-{} consultado correctamente", tipoDocumento, serie, numero);
-            return respuesta;
+            return respuesta.getContent();
         } catch (SOAPFaultException e) {
             log.error("Error SOAP al consultar estado AR: {}", e.getMessage(), e);
             throw new FacturacionException("Error al consultar estado AR: " + e.getMessage(), e);
