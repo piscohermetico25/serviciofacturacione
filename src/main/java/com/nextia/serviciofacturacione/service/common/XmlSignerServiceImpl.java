@@ -29,6 +29,7 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.FileInputStream;
 import java.io.InputStream;
 
 import java.security.KeyStore;
@@ -142,8 +143,8 @@ public class XmlSignerServiceImpl implements XmlSignerService {
             return bos.toByteArray();
             
         } catch (Exception e) {
-            log.error("Error al firmar XML: {}", e.getMessage(), e);
-            throw new FacturacionException("Error al firmar XML: " + e.getMessage(), e);
+            log.error("Error al firmar XML-01: {}", e.getMessage(), e);
+            throw new FacturacionException("Error al firmar XML-01: " + e.getMessage(), e);
         }
     }
 
@@ -154,9 +155,18 @@ public class XmlSignerServiceImpl implements XmlSignerService {
             
             // Cargar el certificado y la clave privada desde el keystore
             KeyStore ks = KeyStore.getInstance("PKCS12");
-            Resource resource = resourceLoader.getResource(rutaCertificado);
-            try (InputStream is = resource.getInputStream()) {
-                ks.load(is, passwordCertificado.toCharArray());
+            
+            if (rutaCertificado.startsWith("classpath:")) {
+                // Cargar desde el classpath usando ResourceLoader
+                Resource resource = resourceLoader.getResource(rutaCertificado);
+                try (InputStream is = resource.getInputStream()) {
+                    ks.load(is, passwordCertificado.toCharArray());
+                }
+            } else {
+                // Cargar desde una ruta absoluta del sistema de archivos
+                try (FileInputStream fis = new FileInputStream(rutaCertificado)) {
+                    ks.load(fis, passwordCertificado.toCharArray());
+                }
             }
             
             PrivateKey privateKey = (PrivateKey) ks.getKey(aliasCertificado, passwordCertificado.toCharArray());

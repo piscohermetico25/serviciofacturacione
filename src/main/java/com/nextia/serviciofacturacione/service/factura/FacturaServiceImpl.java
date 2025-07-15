@@ -62,6 +62,7 @@ public class FacturaServiceImpl implements FacturaService {
             // Paso 1: Generar XML
             byte[] xml = generarXml(factura);
             
+            
             // Paso 2: Firmar XML
             byte[] xmlFirmado = xmlSignerService.firmarXml(xml);
             
