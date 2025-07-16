@@ -13,7 +13,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 /**
  * Implementación del servicio para gestión de facturas electrónicas
@@ -49,8 +53,10 @@ public class FacturaServiceImpl implements FacturaService {
             String xmlContent = ublGenerator.generateFacturaXml(factura);
             return xmlContent.getBytes(StandardCharsets.UTF_8);
         } catch (Exception e) {
-            log.error("Error al generar XML de factura: {}", e.getMessage(), e);
-            throw new FacturacionException("Error al generar XML de factura: " + e.getMessage(), e);
+            String mensaje = String.format("Error al generar XML de factura %s-%s: %s", 
+                    factura.getSerie(), factura.getCorrelativo(), e.getMessage());
+            log.error(mensaje, e);
+            throw new FacturacionException(mensaje, e);
         }
     }
     
@@ -62,12 +68,14 @@ public class FacturaServiceImpl implements FacturaService {
             // Paso 1: Generar XML
             byte[] xml = generarXml(factura);
             
+            // Guardar XML en la carpeta resources/descargas
+            String nombreArchivo = generarNombreArchivo(ruc, TIPO_DOCUMENTO, factura.getSerie(), factura.getCorrelativo());
+            guardarXmlEnDescargas(xml, nombreArchivo + ".xml");
             
             // Paso 2: Firmar XML
             byte[] xmlFirmado = xmlSignerService.firmarXml(xml);
             
             // Paso 3: Comprimir XML firmado a ZIP
-            String nombreArchivo = generarNombreArchivo(ruc, TIPO_DOCUMENTO, factura.getSerie(), factura.getCorrelativo());
             byte[] zip = zipCompressorService.comprimirXml(nombreArchivo + ".xml", xmlFirmado);
             
             // Paso 4: Enviar ZIP a SUNAT (usando credenciales inyectadas)
@@ -79,9 +87,16 @@ public class FacturaServiceImpl implements FacturaService {
                     factura.getSerie(), factura.getCorrelativo(), respuesta.getCodigo());
             
             return respuesta;
+        } catch (FacturacionException e) {
+            String mensaje = String.format("Error al enviar factura %s-%s a SUNAT: %s", 
+                    factura.getSerie(), factura.getCorrelativo(), e.getMessage());
+            log.error(mensaje, e);
+            return new CdrResponse("9999", mensaje);
         } catch (Exception e) {
-            log.error("Error al enviar factura a SUNAT", e);
-            return new CdrResponse("9999", "Error al enviar factura: " + e.getMessage());
+            String mensaje = String.format("Error inesperado al enviar factura %s-%s a SUNAT: %s", 
+                    factura.getSerie(), factura.getCorrelativo(), e.getMessage());
+            log.error(mensaje, e);
+            return new CdrResponse("9999", mensaje);
         }
     }
     
@@ -98,11 +113,15 @@ public class FacturaServiceImpl implements FacturaService {
             
             return respuesta;
         } catch (FacturacionException e) {
-            log.error("Error al consultar estado de factura", e);
-            return new CdrResponse("9999", "Error al consultar estado de factura: " + e.getMessage());
+            String mensaje = String.format("Error al consultar estado de factura %s-%s: %s", 
+                    serie, numero, e.getMessage());
+            log.error(mensaje, e);
+            return new CdrResponse("9999", mensaje);
         } catch (Exception e) {
-            log.error("Error al consultar estado de factura", e);
-            throw new FacturacionException("Error al consultar estado de factura: " + e.getMessage(), e);
+            String mensaje = String.format("Error al consultar estado de factura %s-%s: %s", 
+                    serie, numero, e.getMessage());
+            log.error(mensaje, e);
+            throw new FacturacionException(mensaje, e);
         }
     }
     
@@ -112,5 +131,42 @@ public class FacturaServiceImpl implements FacturaService {
      */
     private String generarNombreArchivo(String ruc, String tipoDocumento, String serie, String numero) {
         return String.format("%s-%s-%s-%s", ruc, tipoDocumento, serie, numero);
+    }
+    
+    /**
+     * Guarda el archivo XML en la carpeta resources/descargas
+     * 
+     * @param xml Contenido del archivo XML en bytes
+     * @param nombreArchivo Nombre del archivo a guardar
+     * @throws FacturacionException Si ocurre un error al guardar el archivo
+     */
+    private void guardarXmlEnDescargas(byte[] xml, String nombreArchivo) {
+        Path rutaDescargas = null;
+        Path rutaArchivo = null;
+        
+        try {
+            // Crear la ruta al directorio de descargas
+            rutaDescargas = Paths.get("src", "main", "resources", "descargas");
+            
+            // Verificar si el directorio existe, si no, crearlo
+            if (!Files.exists(rutaDescargas)) {
+                Files.createDirectories(rutaDescargas);
+                log.info("Directorio de descargas creado: {}", rutaDescargas);
+            }
+            
+            // Crear la ruta completa del archivo
+            rutaArchivo = rutaDescargas.resolve(nombreArchivo);
+            
+            // Guardar el archivo
+            Files.write(rutaArchivo, xml);
+            log.info("Archivo XML guardado exitosamente en: {}", rutaArchivo);
+        } catch (IOException e) {
+            String mensaje = String.format("Error al guardar el archivo XML '%s' en la ruta '%s': %s", 
+                    nombreArchivo, 
+                    (rutaDescargas != null ? rutaDescargas : "desconocida"), 
+                    e.getMessage());
+            log.error(mensaje, e);
+            throw new FacturacionException(mensaje, e);
+        }
     }
 }
