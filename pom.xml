@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.nextia.serviciofacturacione</groupId>
     <artifactId>serviciofacturacione</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>1.0.0</version>
     <packaging>jar</packaging>
     <name>serviciofacturacione</name>
     <description>Servicio para envío de comprobantes electrónicos SUNAT</description>
