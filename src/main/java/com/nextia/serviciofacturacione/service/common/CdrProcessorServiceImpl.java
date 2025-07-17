@@ -9,11 +9,13 @@ import org.w3c.dom.Element;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
 
+import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathFactory;
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
@@ -32,52 +34,46 @@ public class CdrProcessorServiceImpl implements CdrProcessorService {
     private static final String XPATH_DESCRIPCION = "//cbc:Description";
     private static final String XPATH_NOTAS = "//cbc:Note";
 
+
+    @Override
+    public byte[] unzipCDR(byte[] zipBytes) throws IOException {
+        try (ByteArrayInputStream bais = new ByteArrayInputStream(zipBytes);
+            ZipInputStream zis = new ZipInputStream(bais)) {
+            ZipEntry entry;
+            while ((entry = zis.getNextEntry()) != null) {
+                if (entry.getName().endsWith(".xml")) {
+                    return zis.readAllBytes();
+                }
+            }
+        }
+        return null;
+    }
+
+    public CdrResponse obtenerRespuestaSUNAT(byte[] xmlBytes) throws Exception {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        factory.setNamespaceAware(true);
+        DocumentBuilder builder = factory.newDocumentBuilder();
+        Document doc = builder.parse(new ByteArrayInputStream(xmlBytes));
+
+        NodeList responseCode = doc.getElementsByTagName("cbc:ResponseCode");
+        NodeList description = doc.getElementsByTagName("cbc:Description");
+
+        String codigo = responseCode.item(0).getTextContent();
+        String mensaje = description.item(0).getTextContent();
+
+        return new CdrResponse(codigo, mensaje);
+    }
+
+
     @Override
     public CdrResponse procesarZip(byte[] contenidoZip) {
         try {
-            log.info("Procesando ZIP de respuesta CDR");
+
+            byte[] xmlBytes = unzipCDR(contenidoZip);
+            CdrResponse cdrResponse = obtenerRespuestaSUNAT(xmlBytes);
+            cdrResponse.setArchivoCdr(contenidoZip);
             
-            // Buscar el archivo XML de CDR en el ZIP
-            ByteArrayInputStream bais = new ByteArrayInputStream(contenidoZip);
-            ZipInputStream zis = new ZipInputStream(bais);
-            
-            ZipEntry entry;
-            byte[] xmlBytes = null;
-            String nombreArchivo = null;
-            
-            while ((entry = zis.getNextEntry()) != null) {
-                if (entry.getName().startsWith("R-") && entry.getName().endsWith(".xml")) {
-                    log.info("Archivo CDR encontrado: {}", entry.getName());
-                    nombreArchivo = entry.getName();
-                    
-                    // Leer el contenido del archivo XML
-                    byte[] buffer = new byte[1024];
-                    int len;
-                    java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream();
-                    
-                    while ((len = zis.read(buffer)) > 0) {
-                        baos.write(buffer, 0, len);
-                    }
-                    
-                    xmlBytes = baos.toByteArray();
-                    break;
-                }
-                zis.closeEntry();
-            }
-            
-            zis.close();
-            
-            if (xmlBytes == null) {
-                log.error("No se encontró archivo XML de CDR en el ZIP");
-                return new CdrResponse("9999", "No se encontró archivo XML de CDR en el ZIP");
-            }
-            
-            // Procesar el XML de CDR
-            CdrResponse respuesta = procesarXml(xmlBytes);
-            respuesta.setNombreArchivo(nombreArchivo);
-            respuesta.setArchivoCdr(contenidoZip);
-            
-            return respuesta;
+            return cdrResponse;
         } catch (Exception e) {
             log.error("Error al procesar ZIP de CDR", e);
             return new CdrResponse("9999", "Error al procesar ZIP de CDR: " + e.getMessage());

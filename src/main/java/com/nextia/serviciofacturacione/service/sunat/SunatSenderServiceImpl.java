@@ -1,6 +1,7 @@
 package com.nextia.serviciofacturacione.service.sunat;
 
 import com.nextia.serviciofacturacione.exception.FacturacionException;
+import com.nextia.serviciofacturacione.model.common.Emisor;
 import com.nextia.serviciofacturacione.service.sunat.SunatSenderService;
 import com.nextia.serviciofacturacione.service.sunat.client.PasswordCallbackHandler;
 import com.nextia.serviciofacturacione.service.sunat.client.generated.BillService;
@@ -37,25 +38,14 @@ public class SunatSenderServiceImpl implements SunatSenderService {
     
     private final String sunatServiceUrl;
     private final int connectionTimeout;
-    private final String ruc;
-    private final String usuarioSol;
-    private final String claveSol;
-
-    
     private final BillService billService;
     
     public SunatSenderServiceImpl(
             @Value("${sunat.service.url}") String sunatServiceUrl,
             @Value("${sunat.service.timeout}") int connectionTimeout,
-            @Value("${sunat.ruc}") String ruc,
-            @Value("${sunat.usuario.sol}") String usuarioSol,
-            @Value("${sunat.clave.sol}") String claveSol,
             BillService billService) {
         this.sunatServiceUrl = sunatServiceUrl;
         this.connectionTimeout = connectionTimeout;
-        this.ruc = ruc;
-        this.usuarioSol = usuarioSol;
-        this.claveSol = claveSol;
         this.billService = billService;
     }
 
@@ -85,12 +75,12 @@ public class SunatSenderServiceImpl implements SunatSenderService {
 
 
     @Override
-    public byte[] consultarEstado(String tipoDocumento, String serie, String numero) {
+    public byte[] consultarEstado(Emisor emisor, String tipoDocumento, String serie, String numero) {
         try {
             log.info("Consultando estado del documento {}-{}-{} en SUNAT", tipoDocumento, serie, numero);
             
             // Consultar estado
-            String nombreArchivo = ruc + "-" + tipoDocumento + "-" + serie + "-" + numero;
+            String nombreArchivo = emisor.getRuc() + "-" + tipoDocumento + "-" + serie + "-" + numero;
             StatusResponse respuesta = billService.getStatus(nombreArchivo);
             
             log.info("Estado del documento {}-{}-{} consultado correctamente", tipoDocumento, serie, numero);

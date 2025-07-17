@@ -7,10 +7,11 @@ import com.nextia.serviciofacturacione.dto.NotaCreditoRequest;
 import com.nextia.serviciofacturacione.dto.NotaDebitoRequest;
 import com.nextia.serviciofacturacione.model.Boleta;
 import com.nextia.serviciofacturacione.model.CdrResponse;
-import com.nextia.serviciofacturacione.model.Factura;
 import com.nextia.serviciofacturacione.model.NotaCredito;
 import com.nextia.serviciofacturacione.model.NotaDebito;
+import com.nextia.serviciofacturacione.model.common.Emisor;
 import com.nextia.serviciofacturacione.service.ComprobanteService;
+import com.nextia.serviciofacturacione.service.emisor.EmisorService;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -34,30 +35,24 @@ public class ComprobanteController {
     
     @Autowired
     private ComprobanteService comprobanteService;
+
+    @Autowired
+    private EmisorService emisorService;
     
     /**
      * Endpoint para enviar una factura electrónica a SUNAT
      */
     @PostMapping("/factura")
     public ResponseEntity<CdrResponseDto> enviarFactura(@RequestBody FacturaRequest request) {
-        log.info("Recibida solicitud para enviar factura: {}-{}", request.getSerie(), request.getNumero());
-        
-        // Convertir DTO a modelo
-        Factura factura = new Factura();
-        factura.setTipoDocumento("01");
-        factura.setSerie(request.getSerie());
-        factura.setCorrelativo(request.getNumero());
-        factura.setFechaEmision(request.getFechaEmision());
-        factura.setHoraEmision(request.getHoraEmision());
-        factura.setMoneda(request.getMoneda());
-        factura.setEmisor(request.getEmisor());
-        factura.setReceptor(request.getCliente());
-        factura.setDetalles(request.getItems());
-        factura.setTotales(request.getTotales());
-        
+        log.info("Recibida solicitud para enviar factura: {}-{}", request.getComprobante().getSerie(), request.getComprobante().getCorrelativo());
+
+        //crear un servicio para obtener el emisor y los datos del emisor obtenerlos del properties
+   
+
+        Emisor emisor = emisorService.obtenerEmisor();
+
         // Enviar factura a SUNAT
-        CdrResponse respuesta = comprobanteService.enviarFactura(factura, request.getRuc(), 
-                                                               request.getUsuarioSol(), request.getClaveSol());
+        CdrResponse respuesta = comprobanteService.enviarFactura(request, emisor);
         
         // Convertir respuesta a DTO
         CdrResponseDto responseDto = convertirRespuesta(respuesta);

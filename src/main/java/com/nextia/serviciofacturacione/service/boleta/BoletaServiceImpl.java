@@ -3,6 +3,7 @@ package com.nextia.serviciofacturacione.service.boleta;
 import com.nextia.serviciofacturacione.exception.FacturacionException;
 import com.nextia.serviciofacturacione.model.Boleta;
 import com.nextia.serviciofacturacione.model.CdrResponse;
+import com.nextia.serviciofacturacione.model.common.Emisor;
 import com.nextia.serviciofacturacione.service.common.CdrProcessorService;
 import com.nextia.serviciofacturacione.service.sunat.SunatSenderService;
 import com.nextia.serviciofacturacione.service.common.XmlSignerService;
@@ -46,7 +47,9 @@ public class BoletaServiceImpl implements BoletaService {
     public byte[] generarXml(Boleta boleta) {
         try {
             log.info("Generando XML para boleta: {}-{}", boleta.getSerie(), boleta.getCorrelativo());
-            String xmlContent = ublGenerator.generateBoletaXml(boleta);
+            //String xmlContent = ublGenerator.generateBoletaXml(boleta);
+            String xmlContent = "";
+
             return xmlContent.getBytes(StandardCharsets.UTF_8);
         } catch (Exception e) {
             log.error("Error al generar XML de boleta: {}", e.getMessage(), e);
@@ -85,12 +88,11 @@ public class BoletaServiceImpl implements BoletaService {
     }
     
     @Override
-    public CdrResponse consultarEstado(String ruc, String tipoDocumento, String serie, String numero, 
-                                      String usuarioSol, String claveSol) {
+    public CdrResponse consultarEstado(Emisor emisor, String tipoDocumento, String serie, String numero) {
         try {
             log.info("Consultando estado de boleta: {}-{}", serie, numero);
             // Usar método actualizado con credenciales inyectadas
-            byte[] respuestaBytes = sunatSenderService.consultarEstado(tipoDocumento, serie, numero);
+            byte[] respuestaBytes = sunatSenderService.consultarEstado(emisor, tipoDocumento, serie, numero);
             CdrResponse respuesta = cdrProcessorService.procesarXml(respuestaBytes);
             log.info("Consulta de estado de boleta {}-{} completada. Respuesta SUNAT: {}", 
                     serie, numero, respuesta.getCodigo());

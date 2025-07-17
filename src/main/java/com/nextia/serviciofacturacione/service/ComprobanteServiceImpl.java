@@ -1,10 +1,11 @@
 package com.nextia.serviciofacturacione.service;
 
+import com.nextia.serviciofacturacione.dto.FacturaRequest;
 import com.nextia.serviciofacturacione.model.Boleta;
 import com.nextia.serviciofacturacione.model.CdrResponse;
-import com.nextia.serviciofacturacione.model.Factura;
 import com.nextia.serviciofacturacione.model.NotaCredito;
 import com.nextia.serviciofacturacione.model.NotaDebito;
+import com.nextia.serviciofacturacione.model.common.Emisor;
 import com.nextia.serviciofacturacione.service.boleta.BoletaService;
 import com.nextia.serviciofacturacione.service.factura.FacturaService;
 import com.nextia.serviciofacturacione.service.nota.NotaCreditoService;
@@ -37,10 +38,10 @@ public class ComprobanteServiceImpl implements ComprobanteService {
     private NotaDebitoService notaDebitoService;
     
     @Override
-    public CdrResponse enviarFactura(Factura factura, String ruc, String usuarioSol, String claveSol) {
+    public CdrResponse enviarFactura(FacturaRequest facturaRequest, Emisor emisor) {
         try {
-            log.info("Iniciando proceso de envío de factura: {}-{}", factura.getSerie(), factura.getCorrelativo());
-            CdrResponse respuesta = facturaService.enviarFactura(factura, ruc, usuarioSol, claveSol);
+            log.info("Iniciando proceso de envío de factura: {}-{}", facturaRequest.getComprobante().getSerie(), facturaRequest.getComprobante().getCorrelativo());
+            CdrResponse respuesta = facturaService.enviarFactura(facturaRequest, emisor);
             log.info("Proceso de envío de factura completado. Código SUNAT: {}", respuesta.getCodigo());
             return respuesta;
         } catch (Exception e) {
@@ -93,8 +94,7 @@ public class ComprobanteServiceImpl implements ComprobanteService {
     }
 
     @Override
-    public CdrResponse consultarEstado(String ruc, String tipoDocumento, String serie, String numero, 
-                                      String usuarioSol, String claveSol) {
+    public CdrResponse consultarEstado(Emisor emisor, String tipoDocumento, String serie, String numero) {
         try {
             log.info("Consultando estado de comprobante: {}-{}-{}", tipoDocumento, serie, numero);
             
@@ -103,16 +103,16 @@ public class ComprobanteServiceImpl implements ComprobanteService {
             // Seleccionar el servicio adecuado según el tipo de documento
             switch (tipoDocumento) {
                 case "01": // Factura
-                    respuesta = facturaService.consultarEstado(ruc, tipoDocumento, serie, numero, usuarioSol, claveSol);
+                    respuesta = facturaService.consultarEstado(emisor, tipoDocumento, serie, numero);
                     break;
                 case "03": // Boleta
-                    respuesta = boletaService.consultarEstado(ruc, tipoDocumento, serie, numero, usuarioSol, claveSol);
+                    respuesta = boletaService.consultarEstado(emisor, tipoDocumento, serie, numero);
                     break;
                 case "07": // Nota de Crédito
-                    respuesta = notaCreditoService.consultarEstado(ruc, tipoDocumento, serie, numero, usuarioSol, claveSol);
+                    respuesta = notaCreditoService.consultarEstado(emisor, tipoDocumento, serie, numero);
                     break;
                 case "08": // Nota de Débito
-                    respuesta = notaDebitoService.consultarEstado(ruc, tipoDocumento, serie, numero, usuarioSol, claveSol);
+                    respuesta = notaDebitoService.consultarEstado(emisor, tipoDocumento, serie, numero);
                     break;
                 default:
                     log.error("Tipo de documento no soportado: {}", tipoDocumento);

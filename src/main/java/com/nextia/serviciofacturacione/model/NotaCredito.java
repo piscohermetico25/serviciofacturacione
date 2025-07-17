@@ -2,7 +2,7 @@ package com.nextia.serviciofacturacione.model;
 
 import com.nextia.serviciofacturacione.model.common.Cliente;
 import com.nextia.serviciofacturacione.model.common.Emisor;
-import com.nextia.serviciofacturacione.model.common.Item;
+import com.nextia.serviciofacturacione.model.common.Detalle;
 import com.nextia.serviciofacturacione.model.common.Totales;
 
 import java.util.ArrayList;
@@ -31,7 +31,7 @@ public class NotaCredito {
     
     private Emisor emisor;
     private Cliente receptor;
-    private List<Item> detalles;
+    private List<Detalle> detalles;
     private Totales totales;
     
     // Constructores
@@ -161,15 +161,15 @@ public class NotaCredito {
         this.receptor = receptor;
     }
     
-    public List<Item> getDetalles() {
+    public List<Detalle> getDetalles() {
         return detalles;
     }
     
-    public void setDetalles(List<Item> detalles) {
+    public void setDetalles(List<Detalle> detalles) {
         this.detalles = detalles;
     }
     
-    public void addDetalle(Item detalle) {
+    public void addDetalle(Detalle detalle) {
         if (this.detalles == null) {
             this.detalles = new ArrayList<>();
         }

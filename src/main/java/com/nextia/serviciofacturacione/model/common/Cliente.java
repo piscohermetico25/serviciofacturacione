@@ -4,69 +4,43 @@ package com.nextia.serviciofacturacione.model.common;
  * Representa la información del cliente o receptor del comprobante electrónico
  */
 public class Cliente {
-    private String tipoDocumento;
-    private String numeroDocumento;
-    private String razonSocial;
+    private String ruc; // O DNI, etc.
+    private String tipoDoc; // Catálogo 06: RUC, DNI, etc.
+    private String razonSocial; // O nombre completo si es DNI
     private String direccion;
-    private String email;
-    private String telefono;
-    
-    // Constructores
-    public Cliente() {
+    private String pais; // Catálogo 04: PE
+    public String getRuc() {
+        return ruc;
     }
-    
-    public Cliente(String tipoDocumento, String numeroDocumento, String razonSocial) {
-        this.tipoDocumento = tipoDocumento;
-        this.numeroDocumento = numeroDocumento;
-        this.razonSocial = razonSocial;
+    public void setRuc(String ruc) {
+        this.ruc = ruc;
     }
-    
-    // Getters y setters
-    public String getTipoDocumento() {
-        return tipoDocumento;
+    public String getTipoDoc() {
+        return tipoDoc;
     }
-    
-    public void setTipoDocumento(String tipoDocumento) {
-        this.tipoDocumento = tipoDocumento;
+    public void setTipoDoc(String tipoDoc) {
+        this.tipoDoc = tipoDoc;
     }
-    
-    public String getNumeroDocumento() {
-        return numeroDocumento;
-    }
-    
-    public void setNumeroDocumento(String numeroDocumento) {
-        this.numeroDocumento = numeroDocumento;
-    }
-    
     public String getRazonSocial() {
         return razonSocial;
     }
-    
     public void setRazonSocial(String razonSocial) {
         this.razonSocial = razonSocial;
     }
-    
     public String getDireccion() {
         return direccion;
     }
-    
     public void setDireccion(String direccion) {
         this.direccion = direccion;
     }
-    
-    public String getEmail() {
-        return email;
+    public String getPais() {
+        return pais;
+    }
+    public void setPais(String pais) {
+        this.pais = pais;
     }
     
-    public void setEmail(String email) {
-        this.email = email;
-    }
+
     
-    public String getTelefono() {
-        return telefono;
-    }
-    
-    public void setTelefono(String telefono) {
-        this.telefono = telefono;
-    }
+
 }

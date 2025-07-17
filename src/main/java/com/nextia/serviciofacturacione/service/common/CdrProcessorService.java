@@ -1,5 +1,7 @@
 package com.nextia.serviciofacturacione.service.common;
 
+import java.io.IOException;
+
 import com.nextia.serviciofacturacione.model.CdrResponse;
 
 /**
@@ -7,6 +9,9 @@ import com.nextia.serviciofacturacione.model.CdrResponse;
  */
 public interface CdrProcessorService {
     
+
+    byte[] unzipCDR(byte[] zipBytes) throws IOException ;
+
     /**
      * Procesa un archivo ZIP de CDR y extrae la información relevante
      * @param contenidoZip Contenido del archivo ZIP de CDR

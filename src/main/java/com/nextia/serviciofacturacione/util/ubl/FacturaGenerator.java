@@ -1,379 +1,371 @@
 package com.nextia.serviciofacturacione.util.ubl;
 
-import org.w3c.dom.Document;
-import org.w3c.dom.Element;
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
-import com.nextia.serviciofacturacione.exception.UblGenerationException;
-import com.nextia.serviciofacturacione.model.FacturaData;
-import com.nextia.serviciofacturacione.model.FacturaData.FacturaLineaData;
+import org.w3c.dom.*;
 
-/**
- * Clase especializada en la generación de documentos XML UBL para facturas
- */
-public class FacturaGenerator implements UblDocumentGenerator {
+import com.nextia.serviciofacturacione.model.common.Cliente;
+import com.nextia.serviciofacturacione.model.common.Comprobante;
+import com.nextia.serviciofacturacione.model.common.Detalle;
+import com.nextia.serviciofacturacione.model.common.Emisor;
 
-    // Namespaces utilizados en el documento XML
-    private static final String NS_CAC = "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2";
-    private static final String NS_CBC = "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2";
-    private static final String NS_EXT = "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2";
-    private static final String NS_INVOICE = "urn:oasis:names:specification:ubl:schema:xsd:Invoice-2";
-    
-    // Constantes para elementos XML comunes
-    private static final String ELEMENT_ID = "cbc:ID";
-    private static final String ATTR_CURRENCY_ID = "currencyID";
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.*;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 
+import java.io.StringWriter;
+import java.util.List;
+
+
+public class FacturaGenerator {
     /**
-     * Genera el documento XML para una factura
-     * 
-     * @param document Documento XML base
-     * @param data Datos de la factura
-     * @throws UblGenerationException si ocurre algún error durante la generación
+     * Genera un XML UBL tipo Invoice siguiendo la lógica PHP proporcionada.
+     * @param nombreXml Nombre del archivo de salida (sin extensión)
+     * @param emisor Datos del emisor (Map<String, String>)
+     * @param cliente Datos del cliente (Map<String, String>)
+     * @param comprobante Datos del comprobante (Map<String, Object>)
+     * @param detalle Lista de items (List<Map<String, Object>>)
+     * @throws Exception Si ocurre un error en la generación del XML
      */
-    public void generate(Document document, Object data) throws UblGenerationException {
-        try {
-            FacturaData facturaData;
-            if (data instanceof FacturaData facturaDataCast) {
-                facturaData = facturaDataCast;
-            } else {
-                // Si no se proporciona un objeto FacturaData, usamos datos de ejemplo
-                facturaData = crearFacturaEjemplo();
-            }
-            
-            // Crear el elemento raíz Invoice con los namespaces correspondientes
-            Element invoiceElement = document.createElementNS(NS_INVOICE, "Invoice");
-            document.appendChild(invoiceElement);
-            
-            // Agregar los namespaces al elemento raíz
-            invoiceElement.setAttribute("xmlns:cac", NS_CAC);
-            invoiceElement.setAttribute("xmlns:cbc", NS_CBC);
-            invoiceElement.setAttribute("xmlns:ext", NS_EXT);
-            invoiceElement.setAttribute("xmlns", NS_INVOICE);
-            
-            // Generar las secciones del documento
-            generateUBLExtensions(document, invoiceElement);
-            generateDocumentHeader(document, invoiceElement, facturaData);
-            generateSupplierInfo(document, invoiceElement, facturaData);
-            generateCustomerInfo(document, invoiceElement, facturaData);
-            generateMonetaryTotal(document, invoiceElement, facturaData);
-            generateInvoiceLines(document, invoiceElement, facturaData);
-        } catch (Exception e) {
-            throw new UblGenerationException("Error al generar documento de factura", e);
-        }
-    }
-    
-    /**
-     * Crea una factura de ejemplo para pruebas
-     * 
-     * @return FacturaData con datos de ejemplo
-     */
-    private FacturaData crearFacturaEjemplo() {
-        FacturaData factura = new FacturaData();
-        factura.setNumeroFactura("F001-00000001");
-        factura.setFechaEmision(java.time.LocalDate.now());
-        factura.setMoneda("PEN");
-        factura.setRucEmisor("10413425722");
-        factura.setRazonSocialEmisor("EMPRESA DE PRUEBA S.A.C.");
-        factura.setTipoDocumentoEmisor("6");
-        factura.setRucReceptor("20987654321");
-        factura.setRazonSocialReceptor("CLIENTE CORPORATIVO S.A.");
-        factura.setTipoDocumentoReceptor("6");
-        factura.setMontoTotal("4500.00");
-        
-        // Primera línea
-        FacturaLineaData linea1 = new FacturaLineaData();
-        linea1.setId("1");
-        linea1.setCantidad("2.00");
-        linea1.setMontoLinea("4000.00");
-        linea1.setPrecioUnitario("1694.92");
-        linea1.setDescripcion("Laptop HP Pavilion");
-        linea1.setMontoImpuesto("610.17");
-        linea1.setTipoPrecio("01");
-        factura.addLinea(linea1);
-        
-        // Segunda línea
-        FacturaLineaData linea2 = new FacturaLineaData();
-        linea2.setId("2");
-        linea2.setCantidad("1.00");
-        linea2.setMontoLinea("500.00");
-        linea2.setPrecioUnitario("423.73");
-        linea2.setDescripcion("Servicio de instalación de software");
-        linea2.setMontoImpuesto("76.27");
-        linea2.setTipoPrecio("01");
-        factura.addLinea(linea2);
-        
-        return factura;
-    }
-    
-    /**
-     * Genera la sección UBLExtensions que contiene la firma digital
-     * 
-     * @param document Documento XML
-     * @param invoiceElement Elemento raíz Invoice
-     */
-    private void generateUBLExtensions(Document document, Element invoiceElement) {
-        Element extUBLExtensions = document.createElementNS(NS_EXT, "ext:UBLExtensions");
-        invoiceElement.appendChild(extUBLExtensions);
-        
-        Element extUBLExtension = document.createElementNS(NS_EXT, "ext:UBLExtension");
-        extUBLExtensions.appendChild(extUBLExtension);
-        
-        Element extExtensionContent = document.createElementNS(NS_EXT, "ext:ExtensionContent");
+
+     String UbLVersion="2.0";
+     String CustomizationID="1.0";
+
+    public String crearXMLFactura(String nombreXml, Emisor emisor, Cliente cliente, Comprobante comprobante, List<Detalle> detalle) throws Exception {
+        // Configuración segura para evitar XXE
+        DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+        dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+        dbf.setFeature("http://xml.org/sax/features/external-general-entities", false);
+        dbf.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+        dbf.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false);
+        dbf.setXIncludeAware(false);
+        dbf.setExpandEntityReferences(false);
+
+        DocumentBuilder db = dbf.newDocumentBuilder();
+        Document doc = db.newDocument();
+
+        // Elemento raíz Invoice
+        Element invoice = doc.createElementNS("urn:oasis:names:specification:ubl:schema:xsd:Invoice-2", "Invoice");
+        invoice.setAttribute("xmlns:cac", "urn:oasis:names:specification:ubl:schema:xsd:CommonAggregateComponents-2");
+        invoice.setAttribute("xmlns:cbc", "urn:oasis:names:specification:ubl:schema:xsd:CommonBasicComponents-2");
+        invoice.setAttribute("xmlns:ds", "http://www.w3.org/2000/09/xmldsig#");
+        invoice.setAttribute("xmlns:ext", "urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2");
+        doc.appendChild(invoice);
+
+        // UBLExtensions
+        Element extUBLExtensions = doc.createElementNS("urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2", "ext:UBLExtensions");
+        Element extUBLExtension = doc.createElementNS("urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2", "ext:UBLExtension");
+        Element extExtensionContent = doc.createElementNS("urn:oasis:names:specification:ubl:schema:xsd:CommonExtensionComponents-2", "ext:ExtensionContent");
         extUBLExtension.appendChild(extExtensionContent);
-        
-        // No agregamos la firma aquí, solo preparamos la estructura
-        // La firma será agregada por XmlSignatureService después de generar el documento
-    }
-    
-    /**
-     * Genera la cabecera del documento
-     * 
-     * @param document Documento XML
-     * @param invoiceElement Elemento raíz de la factura
-     * @param facturaData Datos de la factura
-     * @throws UblGenerationException si ocurre algún error durante la generación
-     */
-    private void generateDocumentHeader(Document document, Element invoiceElement, FacturaData facturaData) throws UblGenerationException {
-        try {
-            // UBLVersionID
-            Element ublVersionID = document.createElementNS(NS_CBC, "cbc:UBLVersionID");
-            ublVersionID.setTextContent("2.1");
-            invoiceElement.appendChild(ublVersionID);
-            
-            // CustomizationID
-            Element customizationID = document.createElementNS(NS_CBC, "cbc:CustomizationID");
-            customizationID.setTextContent("2.0");
-            invoiceElement.appendChild(customizationID);
-            
-            // ID (número de factura)
-            Element id = document.createElementNS(NS_CBC, ELEMENT_ID);
-            id.setTextContent(facturaData.getNumeroFactura());
-            invoiceElement.appendChild(id);
-            
-            // IssueDate (fecha de emisión)
-            Element issueDate = document.createElementNS(NS_CBC, "cbc:IssueDate");
-            LocalDate fechaEmision = facturaData.getFechaEmision();
-            issueDate.setTextContent(fechaEmision.format(DateTimeFormatter.ISO_DATE));
-            invoiceElement.appendChild(issueDate);
-            
-            // DocumentCurrencyCode (moneda)
-            Element documentCurrencyCode = document.createElementNS(NS_CBC, "cbc:DocumentCurrencyCode");
-            documentCurrencyCode.setTextContent(facturaData.getMoneda());
-            invoiceElement.appendChild(documentCurrencyCode);
-        } catch (Exception e) {
-            throw new UblGenerationException("Error al generar cabecera del documento", e);
+        extUBLExtensions.appendChild(extUBLExtension);
+        invoice.appendChild(extUBLExtensions);
+
+        // UBLVersionID, CustomizationID, ID, IssueDate, IssueTime, DueDate, InvoiceTypeCode, Note, DocumentCurrencyCode
+        appendTextElement(doc, invoice, "cbc:UBLVersionID", "2.1");
+        appendTextElement(doc, invoice, "cbc:CustomizationID", "2.0");
+        appendTextElement(doc, invoice, "cbc:ID", comprobante.getSerie() + "-" + comprobante.getCorrelativo());
+        appendTextElement(doc, invoice, "cbc:IssueDate", comprobante.getFechaEmision().toString());
+        appendTextElement(doc, invoice, "cbc:IssueTime", "00:00:00");
+        appendTextElement(doc, invoice, "cbc:DueDate", comprobante.getFechaEmision().toString());
+        Element invoiceTypeCode = doc.createElement("cbc:InvoiceTypeCode");
+        invoiceTypeCode.setAttribute("listID", "0101");
+        invoiceTypeCode.setTextContent(comprobante.getTipoDoc());
+        invoice.appendChild(invoiceTypeCode);
+        Element note = doc.createElement("cbc:Note");
+        note.setAttribute("languageLocaleID", "1000");
+        note.appendChild(doc.createCDATASection(comprobante.getTotalTexto()));
+        invoice.appendChild(note);
+        appendTextElement(doc, invoice, "cbc:DocumentCurrencyCode", comprobante.getMoneda());
+
+        // Firma digital (Signature)
+        Element signature = doc.createElement("cac:Signature");
+        appendTextElement(doc, signature, "cbc:ID", emisor.getRuc());
+        Element sigNote = doc.createElement("cbc:Note");
+        sigNote.appendChild(doc.createCDATASection(emisor.getNombreComercial()));
+        signature.appendChild(sigNote);
+        Element signatoryParty = doc.createElement("cac:SignatoryParty");
+        Element partyId = doc.createElement("cac:PartyIdentification");
+        appendTextElement(doc, partyId, "cbc:ID", emisor.getRuc());
+        signatoryParty.appendChild(partyId);
+        Element partyName = doc.createElement("cac:PartyName");
+        Element name = doc.createElement("cbc:Name");
+        name.appendChild(doc.createCDATASection(emisor.getRazonSocial()));
+        partyName.appendChild(name);
+        signatoryParty.appendChild(partyName);
+        signature.appendChild(signatoryParty);
+        Element digitalSignatureAttachment = doc.createElement("cac:DigitalSignatureAttachment");
+        Element externalReference = doc.createElement("cac:ExternalReference");
+        appendTextElement(doc, externalReference, "cbc:URI", "#SIGN-EMPRESA");
+        digitalSignatureAttachment.appendChild(externalReference);
+        signature.appendChild(digitalSignatureAttachment);
+        invoice.appendChild(signature);
+
+        // AccountingSupplierParty
+        Element supplierParty = doc.createElement("cac:AccountingSupplierParty");
+        Element supplierPartyParty = doc.createElement("cac:Party");
+        Element supplierPartyId = doc.createElement("cac:PartyIdentification");
+        Element supplierId = doc.createElement("cbc:ID");
+        supplierId.setAttribute("schemeID", emisor.getTipoDoc());
+        supplierId.setTextContent(emisor.getRuc());
+        supplierPartyId.appendChild(supplierId);
+        supplierPartyParty.appendChild(supplierPartyId);
+        Element supplierPartyName = doc.createElement("cac:PartyName");
+        Element supplierName = doc.createElement("cbc:Name");
+        supplierName.appendChild(doc.createCDATASection(emisor.getNombreComercial()));
+        supplierPartyName.appendChild(supplierName);
+        supplierPartyParty.appendChild(supplierPartyName);
+        Element supplierLegalEntity = doc.createElement("cac:PartyLegalEntity");
+        Element supplierRegName = doc.createElement("cbc:RegistrationName");
+        supplierRegName.appendChild(doc.createCDATASection(emisor.getRazonSocial()));
+        supplierLegalEntity.appendChild(supplierRegName);
+        Element supplierRegAddress = doc.createElement("cac:RegistrationAddress");
+        appendTextElement(doc, supplierRegAddress, "cbc:ID", emisor.getUbigeo());
+        appendTextElement(doc, supplierRegAddress, "cbc:AddressTypeCode", "0000");
+        appendTextElement(doc, supplierRegAddress, "cbc:CitySubdivisionName", "NONE");
+        appendTextElement(doc, supplierRegAddress, "cbc:CityName", emisor.getProvincia());
+        appendTextElement(doc, supplierRegAddress, "cbc:CountrySubentity", emisor.getDepartamento());
+        appendTextElement(doc, supplierRegAddress, "cbc:District", emisor.getDistrito());
+        Element supplierAddressLine = doc.createElement("cac:AddressLine");
+        Element supplierLine = doc.createElement("cbc:Line");
+        supplierLine.appendChild(doc.createCDATASection(emisor.getDireccion()));
+        supplierAddressLine.appendChild(supplierLine);
+        supplierRegAddress.appendChild(supplierAddressLine);
+        Element supplierCountry = doc.createElement("cac:Country");
+        appendTextElement(doc, supplierCountry, "cbc:IdentificationCode", emisor.getPais());
+        supplierRegAddress.appendChild(supplierCountry);
+        supplierLegalEntity.appendChild(supplierRegAddress);
+        supplierPartyParty.appendChild(supplierLegalEntity);
+        supplierParty.appendChild(supplierPartyParty);
+        invoice.appendChild(supplierParty);
+
+        // AccountingCustomerParty
+        Element customerParty = doc.createElement("cac:AccountingCustomerParty");
+        Element customerPartyParty = doc.createElement("cac:Party");
+        Element customerPartyId = doc.createElement("cac:PartyIdentification");
+        Element customerId = doc.createElement("cbc:ID");
+        customerId.setAttribute("schemeID", cliente.getTipoDoc());
+        customerId.setTextContent(cliente.getRuc());
+        customerPartyId.appendChild(customerId);
+        customerPartyParty.appendChild(customerPartyId);
+        Element customerLegalEntity = doc.createElement("cac:PartyLegalEntity");
+        Element customerRegName = doc.createElement("cbc:RegistrationName");
+        customerRegName.appendChild(doc.createCDATASection(cliente.getRazonSocial()));
+        customerLegalEntity.appendChild(customerRegName);
+        if ("6".equals(cliente.getTipoDoc())) {
+            Element customerRegAddress = doc.createElement("cac:RegistrationAddress");
+            Element customerAddressLine = doc.createElement("cac:AddressLine");
+            Element customerLine = doc.createElement("cbc:Line");
+            customerLine.appendChild(doc.createCDATASection(cliente.getDireccion()));
+            customerAddressLine.appendChild(customerLine);
+            customerRegAddress.appendChild(customerAddressLine);
+            Element customerCountry = doc.createElement("cac:Country");
+            appendTextElement(doc, customerCountry, "cbc:IdentificationCode", cliente.getPais());
+            customerRegAddress.appendChild(customerCountry);
+            customerLegalEntity.appendChild(customerRegAddress);
         }
-    }
-    
-    /**
-     * Genera la información del proveedor (emisor de la factura)
-     * 
-     * @param document Documento XML
-     * @param invoiceElement Elemento raíz Invoice
-     * @param facturaData Datos de la factura
-     * @throws UblGenerationException si ocurre algún error durante la generación
-     */
-    private void generateSupplierInfo(Document document, Element invoiceElement, FacturaData facturaData) throws UblGenerationException {
-        try {
-            Element accountingSupplierParty = document.createElementNS(NS_CAC, "cac:AccountingSupplierParty");
-            invoiceElement.appendChild(accountingSupplierParty);
-            
-            Element party = document.createElementNS(NS_CAC, "cac:Party");
-            accountingSupplierParty.appendChild(party);
-            
-            // PartyIdentification (RUC del emisor)
-            Element partyIdentification = document.createElementNS(NS_CAC, "cac:PartyIdentification");
-            party.appendChild(partyIdentification);
-            
-            Element partyID = document.createElementNS(NS_CBC, ELEMENT_ID);
-            partyID.setAttribute("schemeID", facturaData.getTipoDocumentoEmisor()); // 6 = RUC
-            partyID.setTextContent(facturaData.getRucEmisor());
-            partyIdentification.appendChild(partyID);
-            
-            // PartyName (Nombre comercial)
-            Element partyName = document.createElementNS(NS_CAC, "cac:PartyName");
-            party.appendChild(partyName);
-            
-            Element name = document.createElementNS(NS_CBC, "cbc:Name");
-            name.setTextContent(facturaData.getRazonSocialEmisor());
-            partyName.appendChild(name);
-            
-            // PartyLegalEntity (Razón social)
-            Element partyLegalEntity = document.createElementNS(NS_CAC, "cac:PartyLegalEntity");
-            party.appendChild(partyLegalEntity);
-            
-            Element registrationName = document.createElementNS(NS_CBC, "cbc:RegistrationName");
-            registrationName.setTextContent(facturaData.getRazonSocialEmisor());
-            partyLegalEntity.appendChild(registrationName);
-        } catch (Exception e) {
-            throw new UblGenerationException("Error al generar información del proveedor", e);
-        }
-    }
-    
-    /**
-     * Genera la información del cliente (receptor de la factura)
-     * 
-     * @param document Documento XML
-     * @param invoiceElement Elemento raíz Invoice
-     * @param facturaData Datos de la factura
-     * @throws UblGenerationException si ocurre algún error durante la generación
-     */
-    private void generateCustomerInfo(Document document, Element invoiceElement, FacturaData facturaData) throws UblGenerationException {
-        try {
-            Element accountingCustomerParty = document.createElementNS(NS_CAC, "cac:AccountingCustomerParty");
-            invoiceElement.appendChild(accountingCustomerParty);
-            
-            Element party = document.createElementNS(NS_CAC, "cac:Party");
-            accountingCustomerParty.appendChild(party);
-            
-            // PartyIdentification (RUC del receptor)
-            Element partyIdentification = document.createElementNS(NS_CAC, "cac:PartyIdentification");
-            party.appendChild(partyIdentification);
-            
-            Element partyID = document.createElementNS(NS_CBC, ELEMENT_ID);
-            partyID.setAttribute("schemeID", facturaData.getTipoDocumentoReceptor()); // 6 = RUC
-            partyID.setTextContent(facturaData.getRucReceptor());
-            partyIdentification.appendChild(partyID);
-            
-            // PartyLegalEntity (Razón social del receptor)
-            Element partyLegalEntity = document.createElementNS(NS_CAC, "cac:PartyLegalEntity");
-            party.appendChild(partyLegalEntity);
-            
-            Element registrationName = document.createElementNS(NS_CBC, "cbc:RegistrationName");
-            registrationName.setTextContent(facturaData.getRazonSocialReceptor());
-            partyLegalEntity.appendChild(registrationName);
-        } catch (Exception e) {
-            throw new UblGenerationException("Error al generar información del cliente", e);
-        }
-    }
-    
-    /**
-     * Genera la sección de totales monetarios
-     * 
-     * @param document Documento XML
-     * @param invoiceElement Elemento raíz Invoice
-     * @param facturaData Datos de la factura
-     * @throws UblGenerationException si ocurre algún error durante la generación
-     */
-    private void generateMonetaryTotal(Document document, Element invoiceElement, FacturaData facturaData) throws UblGenerationException {
-        try {
-            Element legalMonetaryTotal = document.createElementNS(NS_CAC, "cac:LegalMonetaryTotal");
-            invoiceElement.appendChild(legalMonetaryTotal);
-            
-            Element payableAmount = document.createElementNS(NS_CBC, "cbc:PayableAmount");
-            payableAmount.setAttribute(ATTR_CURRENCY_ID, facturaData.getMoneda());
-            payableAmount.setTextContent(facturaData.getMontoTotal());
-            legalMonetaryTotal.appendChild(payableAmount);
-        } catch (Exception e) {
-            throw new UblGenerationException("Error al generar totales monetarios", e);
-        }
-    }
-    
-    /**
-     * Genera las líneas de la factura
-     * 
-     * @param document Documento XML
-     * @param invoiceElement Elemento raíz Invoice
-     * @param facturaData Datos de la factura
-     * @throws UblGenerationException si ocurre algún error durante la generación
-     */
-    private void generateInvoiceLines(Document document, Element invoiceElement, FacturaData facturaData) throws UblGenerationException {
-        try {
-            // Generar cada línea de factura
-            for (FacturaLineaData lineData : facturaData.getLineas()) {
-                generateInvoiceLine(document, invoiceElement, lineData, facturaData.getMoneda());
+        customerPartyParty.appendChild(customerLegalEntity);
+        customerParty.appendChild(customerPartyParty);
+        invoice.appendChild(customerParty);
+
+        // PaymentTerms
+        if (comprobante.getFormaPagoActivo() == 1) {
+            Element paymentTerms = doc.createElement("cac:PaymentTerms");
+            appendTextElement(doc, paymentTerms, "cbc:ID", "FormaPago");
+            appendTextElement(doc, paymentTerms, "cbc:PaymentMeansID", "Credito");
+            appendTextElement(doc, paymentTerms, "cbc:Amount", comprobante.getTotal().toString()).setAttribute("currencyID", comprobante.getMoneda());
+            invoice.appendChild(paymentTerms);
+            int numeroCuota = comprobante.getNumeroCuota();
+            int diasCuotas = comprobante.getDiasCuotasVentas();
+            String fechaEmision = comprobante.getFechaEmision().toString();
+            for (int i = 1; i <= numeroCuota; i++) {
+                Element cuota = doc.createElement("cac:PaymentTerms");
+                appendTextElement(doc, cuota, "cbc:ID", "FormaPago");
+                appendTextElement(doc, cuota, "cbc:PaymentMeansID", String.format("Cuota%03d", i));
+                appendTextElement(doc, cuota, "cbc:Amount", comprobante.getFormaPagoMontoApagarPorMes().toString()).setAttribute("currencyID", comprobante.getMoneda());
+                // Calcular fecha de pago
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd");
+                java.util.Date date = sdf.parse(fechaEmision);
+                long ms = date.getTime() + (long) diasCuotas * i * 24 * 60 * 60 * 1000;
+                String fechaPago = sdf.format(new java.util.Date(ms));
+                appendTextElement(doc, cuota, "cbc:PaymentDueDate", fechaPago);
+                invoice.appendChild(cuota);
             }
-        } catch (Exception e) {
-            throw new UblGenerationException("Error al generar líneas de factura", e);
+        } else {
+            Element paymentTerms = doc.createElement("cac:PaymentTerms");
+            appendTextElement(doc, paymentTerms, "cbc:ID", "FormaPago");
+            appendTextElement(doc, paymentTerms, "cbc:PaymentMeansID", "Contado");
+            invoice.appendChild(paymentTerms);
         }
-    }
-    
-    /**
-     * Genera una línea de la factura
-     * 
-     * @param document Documento XML
-     * @param invoiceElement Elemento raíz Invoice
-     * @param lineData Datos de la línea
-     * @param moneda Moneda de la factura
-     * @throws UblGenerationException si ocurre algún error durante la generación
-     */
-    private void generateInvoiceLine(Document document, Element invoiceElement, FacturaLineaData lineData, String moneda) throws UblGenerationException {
-        try {
-            Element invoiceLine = document.createElementNS(NS_CAC, "cac:InvoiceLine");
-            invoiceElement.appendChild(invoiceLine);
+
+        // TaxTotal y TaxSubtotals
+        Element taxTotal = doc.createElement("cac:TaxTotal");
+        appendTextElement(doc, taxTotal, "cbc:TaxAmount", comprobante.getIgv().toString()).setAttribute("currencyID", comprobante.getMoneda());
+        // TaxSubtotal: gravadas
+        Element taxSubtotalGrav = doc.createElement("cac:TaxSubtotal");
+        appendTextElement(doc, taxSubtotalGrav, "cbc:TaxableAmount", comprobante.getTotalOpGravadas().toString()).setAttribute("currencyID", comprobante.getMoneda());
+        appendTextElement(doc, taxSubtotalGrav, "cbc:TaxAmount", comprobante.getIgv().toString()).setAttribute("currencyID", comprobante.getMoneda());
+        Element taxCategoryGrav = doc.createElement("cac:TaxCategory");
+        Element taxSchemeGrav = doc.createElement("cac:TaxScheme");
+        appendTextElement(doc, taxSchemeGrav, "cbc:ID", "1000");
+        appendTextElement(doc, taxSchemeGrav, "cbc:Name", "IGV");
+        appendTextElement(doc, taxSchemeGrav, "cbc:TaxTypeCode", "VAT");
+        taxCategoryGrav.appendChild(taxSchemeGrav);
+        taxSubtotalGrav.appendChild(taxCategoryGrav);
+        taxTotal.appendChild(taxSubtotalGrav);
+        // TaxSubtotal: inafectas
+        if (Double.parseDouble(comprobante.getTotalOpInafectas().toString()) > 0) {
+            Element taxSubtotalIna = doc.createElement("cac:TaxSubtotal");
+            appendTextElement(doc, taxSubtotalIna, "cbc:TaxableAmount", comprobante.getTotalOpInafectas().toString()).setAttribute("currencyID", comprobante.getMoneda());
+            appendTextElement(doc, taxSubtotalIna, "cbc:TaxAmount", "0.00").setAttribute("currencyID", comprobante.getMoneda());
+            Element taxCategoryIna = doc.createElement("cac:TaxCategory");
+            Element taxSchemeIna = doc.createElement("cac:TaxScheme");
+            Element idIna = doc.createElement("cbc:ID");
+            idIna.setAttribute("schemeID", "UN/ECE 5305");
+            idIna.setAttribute("schemeName", "Tax Category Identifier");
+            idIna.setAttribute("schemeAgencyName", "United Nations Economic Commission for Europe");
+            idIna.setTextContent("E");
+            taxCategoryIna.appendChild(idIna);
+            Element idSchemeIna = doc.createElement("cbc:ID");
+            idSchemeIna.setAttribute("schemeID", "UN/ECE 5153");
+            idSchemeIna.setAttribute("schemeAgencyID", "6");
+            idSchemeIna.setTextContent("9997");
+            taxSchemeIna.appendChild(idSchemeIna);
+            appendTextElement(doc, taxSchemeIna, "cbc:Name", "EXO");
+            appendTextElement(doc, taxSchemeIna, "cbc:TaxTypeCode", "VAT");
+            taxCategoryIna.appendChild(taxSchemeIna);
+            taxSubtotalIna.appendChild(taxCategoryIna);
+            taxTotal.appendChild(taxSubtotalIna);
+        }
+        // TaxSubtotal: gratuita
+        if (Double.parseDouble(comprobante.getTotalOpGratuita().toString()) > 0) {
+            Element taxSubtotalGra = doc.createElement("cac:TaxSubtotal");
+            appendTextElement(doc, taxSubtotalGra, "cbc:TaxableAmount", comprobante.getTotalOpGratuita().toString()).setAttribute("currencyID", comprobante.getMoneda());
+            appendTextElement(doc, taxSubtotalGra, "cbc:TaxAmount", "0.00").setAttribute("currencyID", comprobante.getMoneda());
+            Element taxCategoryGra = doc.createElement("cac:TaxCategory");
+            Element taxSchemeGra = doc.createElement("cac:TaxScheme");
+            Element idGra = doc.createElement("cbc:ID");
+            idGra.setAttribute("schemeName", "Codigo de tributos");
+            idGra.setAttribute("schemeAgencyName", "PE:SUNAT");
+            idGra.setAttribute("schemeURI", "urn:pe:gob:sunat:cpe:see:gem:catalogos:catalogo05");
+            idGra.setTextContent("9996");
+            taxSchemeGra.appendChild(idGra);
+            appendTextElement(doc, taxSchemeGra, "cbc:Name", "GRA");
+            appendTextElement(doc, taxSchemeGra, "cbc:TaxTypeCode", "FRE");
+            taxCategoryGra.appendChild(taxSchemeGra);
+            taxSubtotalGra.appendChild(taxCategoryGra);
+            taxTotal.appendChild(taxSubtotalGra);
+        }
+        // TaxSubtotal: exoneradas
+        if (Double.parseDouble(comprobante.getTotalOpExoneradas().toString()) > 0) {
+            Element taxSubtotalExo = doc.createElement("cac:TaxSubtotal");
+            appendTextElement(doc, taxSubtotalExo, "cbc:TaxableAmount", comprobante.getTotalOpExoneradas().toString()).setAttribute("currencyID", comprobante.getMoneda());
+            appendTextElement(doc, taxSubtotalExo, "cbc:TaxAmount", "0.00").setAttribute("currencyID", comprobante.getMoneda());
+            Element taxCategoryExo = doc.createElement("cac:TaxCategory");
+            Element taxSchemeExo = doc.createElement("cac:TaxScheme");
             
-            // ID de línea
-            Element lineID = document.createElementNS(NS_CBC, ELEMENT_ID);
-            lineID.setTextContent(lineData.getId());
-            invoiceLine.appendChild(lineID);
-            
-            // Cantidad
-            Element invoicedQuantity = document.createElementNS(NS_CBC, "cbc:InvoicedQuantity");
-            invoicedQuantity.setAttribute("unitCode", "NIU");
-            invoicedQuantity.setTextContent(lineData.getCantidad());
-            invoiceLine.appendChild(invoicedQuantity);
-            
-            // Monto total de línea
-            Element lineExtensionAmount = document.createElementNS(NS_CBC, "cbc:LineExtensionAmount");
-            lineExtensionAmount.setAttribute(ATTR_CURRENCY_ID, moneda);
-            lineExtensionAmount.setTextContent(lineData.getMontoLinea());
-            invoiceLine.appendChild(lineExtensionAmount);
-            
-            // Referencia de precio
-            Element pricingReference = document.createElementNS(NS_CAC, "cac:PricingReference");
-            invoiceLine.appendChild(pricingReference);
-            Element alternativeConditionPrice = document.createElementNS(NS_CAC, "cac:AlternativeConditionPrice");
+            Element idExo = doc.createElement("cbc:ID");
+            idExo.setAttribute("schemeID", "UN/ECE 5305");
+            idExo.setAttribute("schemeName", "Tax Category Identifier");
+            idExo.setAttribute("schemeAgencyName", "United Nations Economic Commission for Europe");
+            idExo.setTextContent("E");
+            taxCategoryExo.appendChild(idExo);
+            Element idSchemeExo = doc.createElement("cbc:ID");
+            idSchemeExo.setAttribute("schemeID", "UN/ECE 5153");
+            idSchemeExo.setAttribute("schemeAgencyID", "6");
+            //idSchemeExo.setTextContent("9998");
+            idSchemeExo.setTextContent("9997");
+            taxSchemeExo.appendChild(idSchemeExo);
+            //appendTextElement(doc, taxSchemeExo, "cbc:Name", "INA");
+            //appendTextElement(doc, taxSchemeExo, "cbc:TaxTypeCode", "FRE");
+            appendTextElement(doc, taxSchemeExo, "cbc:Name", "EXO");
+            appendTextElement(doc, taxSchemeExo, "cbc:TaxTypeCode", "VAT");
+            taxCategoryExo.appendChild(taxSchemeExo);
+            taxSubtotalExo.appendChild(taxCategoryExo);
+            taxTotal.appendChild(taxSubtotalExo);
+        }
+        invoice.appendChild(taxTotal);
+
+        // LegalMonetaryTotal
+        double totalAntesImpuestos = Double.parseDouble(comprobante.getTotalOpGravadas().toString()) +
+                Double.parseDouble(comprobante.getTotalOpExoneradas().toString()) +
+                Double.parseDouble(comprobante.getTotalOpInafectas().toString());
+        Element legalMonetaryTotal = doc.createElement("cac:LegalMonetaryTotal");
+        appendTextElement(doc, legalMonetaryTotal, "cbc:LineExtensionAmount", String.valueOf(totalAntesImpuestos)).setAttribute("currencyID", comprobante.getMoneda());
+        appendTextElement(doc, legalMonetaryTotal, "cbc:TaxInclusiveAmount", comprobante.getTotal().toString()).setAttribute("currencyID", comprobante.getMoneda());
+        appendTextElement(doc, legalMonetaryTotal, "cbc:PayableAmount", comprobante.getTotal().toString()).setAttribute("currencyID", comprobante.getMoneda());
+        invoice.appendChild(legalMonetaryTotal);
+
+        // InvoiceLine (detalle)
+        for (Detalle v : detalle) {
+            Element invoiceLine = doc.createElement("cac:InvoiceLine");
+            appendTextElement(doc, invoiceLine, "cbc:ID", v.getItem().toString());
+            Element invoicedQuantity = appendTextElement(doc, invoiceLine, "cbc:InvoicedQuantity", v.getCantidad().toString());
+            invoicedQuantity.setAttribute("unitCode", v.getUnidad());
+            appendTextElement(doc, invoiceLine, "cbc:LineExtensionAmount", v.getValorTotal().toString()).setAttribute("currencyID", comprobante.getMoneda());
+            // PricingReference
+            Element pricingReference = doc.createElement("cac:PricingReference");
+            Element alternativeConditionPrice = doc.createElement("cac:AlternativeConditionPrice");
+            appendTextElement(doc, alternativeConditionPrice, "cbc:PriceAmount", v.getPrecioUnitario().toString()).setAttribute("currencyID", comprobante.getMoneda());
+            appendTextElement(doc, alternativeConditionPrice, "cbc:PriceTypeCode", v.getTipoPrecio());
             pricingReference.appendChild(alternativeConditionPrice);
-            
-            // Precio unitario con impuestos
-            Element priceAmount = document.createElementNS(NS_CBC, "cbc:PriceAmount");
-            priceAmount.setAttribute(ATTR_CURRENCY_ID, moneda);
-            priceAmount.setTextContent(lineData.getPrecioUnitario());
-            alternativeConditionPrice.appendChild(priceAmount);
-            
-            // Tipo de precio
-            Element priceTypeCode = document.createElementNS(NS_CBC, "cbc:PriceTypeCode");
-            priceTypeCode.setTextContent(lineData.getTipoPrecio());
-            alternativeConditionPrice.appendChild(priceTypeCode);
-            
-            // Total de impuestos
-            Element taxTotal = document.createElementNS(NS_CAC, "cac:TaxTotal");
-            invoiceLine.appendChild(taxTotal);
-            
-            // Monto total de impuesto para la línea
-            Element taxTotalAmount = document.createElementNS(NS_CBC, "cbc:TaxAmount");
-            taxTotalAmount.setAttribute(ATTR_CURRENCY_ID, moneda);
-            taxTotalAmount.setTextContent(lineData.getMontoImpuesto());
-            taxTotal.appendChild(taxTotalAmount);
-            
-            Element taxSubtotal = document.createElementNS(NS_CAC, "cac:TaxSubtotal");
-            taxTotal.appendChild(taxSubtotal);
-            
-            // Monto de impuesto en el subtotal
-            Element taxAmount = document.createElementNS(NS_CBC, "cbc:TaxAmount");
-            taxAmount.setAttribute(ATTR_CURRENCY_ID, moneda);
-            taxAmount.setTextContent(lineData.getMontoImpuesto());
-            taxSubtotal.appendChild(taxAmount);
-            
-            // Información del ítem
-            Element item = document.createElementNS(NS_CAC, "cac:Item");
-            invoiceLine.appendChild(item);
-            
-            // Descripción del ítem
-            Element description = document.createElementNS(NS_CBC, "cbc:Description");
-            description.setTextContent(lineData.getDescripcion());
+            invoiceLine.appendChild(pricingReference);
+            // TaxTotal
+            Element lineTaxTotal = doc.createElement("cac:TaxTotal");
+            appendTextElement(doc, lineTaxTotal, "cbc:TaxAmount", v.getIgv().toString()).setAttribute("currencyID", comprobante.getMoneda());
+            Element lineTaxSubtotal = doc.createElement("cac:TaxSubtotal");
+            appendTextElement(doc, lineTaxSubtotal, "cbc:TaxableAmount", v.getValorTotal().toString()).setAttribute("currencyID", comprobante.getMoneda());
+            appendTextElement(doc, lineTaxSubtotal, "cbc:TaxAmount", v.getIgv().toString()).setAttribute("currencyID", comprobante.getMoneda());
+            Element lineTaxCategory = doc.createElement("cac:TaxCategory");
+            appendTextElement(doc, lineTaxCategory, "cbc:Percent", v.getPorcentajeIgv().toString());
+            appendTextElement(doc, lineTaxCategory, "cbc:TaxExemptionReasonCode", v.getCodigoAfectacionAlt());
+            Element lineTaxScheme = doc.createElement("cac:TaxScheme");
+            appendTextElement(doc, lineTaxScheme, "cbc:ID", v.getCodigoAfectacion());
+            appendTextElement(doc, lineTaxScheme, "cbc:Name", v.getNombreAfectacion());
+            appendTextElement(doc, lineTaxScheme, "cbc:TaxTypeCode", v.getTipoAfectacion());
+            lineTaxCategory.appendChild(lineTaxScheme);
+            lineTaxSubtotal.appendChild(lineTaxCategory);
+            lineTaxTotal.appendChild(lineTaxSubtotal);
+            invoiceLine.appendChild(lineTaxTotal);
+            // Item
+            Element item = doc.createElement("cac:Item");
+            Element description = doc.createElement("cbc:Description");
+            description.appendChild(doc.createCDATASection(v.getDescripcion()));
             item.appendChild(description);
-            
-            // Precio unitario sin impuestos
-            Element price = document.createElementNS(NS_CAC, "cac:Price");
+            Element sellersItemIdentification = doc.createElement("cac:SellersItemIdentification");
+            appendTextElement(doc, sellersItemIdentification, "cbc:ID", v.getCodigo());
+            item.appendChild(sellersItemIdentification);
+            invoiceLine.appendChild(item);
+            // Price
+            Element price = doc.createElement("cac:Price");
+            appendTextElement(doc, price, "cbc:PriceAmount", v.getValorUnitario().toString()).setAttribute("currencyID", comprobante.getMoneda());
             invoiceLine.appendChild(price);
-            
-            Element unitPriceAmount = document.createElementNS(NS_CBC, "cbc:PriceAmount");
-            unitPriceAmount.setAttribute(ATTR_CURRENCY_ID, moneda);
-            unitPriceAmount.setTextContent(lineData.getPrecioUnitario());
-            price.appendChild(unitPriceAmount);
-        } catch (Exception e) {
-            throw new UblGenerationException("Error al generar línea de factura", e);
+            invoice.appendChild(invoiceLine);
         }
+
+        // Guardar XML en archivo
+
+        // Al final, transformar el Document a String
+        TransformerFactory tf = TransformerFactory.newInstance();
+        Transformer transformer = tf.newTransformer();
+        transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+        StringWriter writer = new StringWriter();
+        transformer.transform(new DOMSource(doc), new StreamResult(writer));
+        String xmlString = writer.toString();
+
+        // (Opcional) Guardar el archivo en disco
+        // transformer.transform(new DOMSource(doc), new StreamResult(new File(nombreXml)));
+
+        return xmlString;
     }
+
+    // Método auxiliar para crear elementos de texto
+    private Element appendTextElement(Document doc, Element parent, String tag, String value) {
+        Element elem = doc.createElement(tag);
+        if (value != null) elem.setTextContent(value);
+        parent.appendChild(elem);
+        return elem;
+    }
+
 }
+

@@ -2,7 +2,7 @@ package com.nextia.serviciofacturacione.dto;
 
 import com.nextia.serviciofacturacione.model.common.Cliente;
 import com.nextia.serviciofacturacione.model.common.Emisor;
-import com.nextia.serviciofacturacione.model.common.Item;
+import com.nextia.serviciofacturacione.model.common.Detalle;
 import com.nextia.serviciofacturacione.model.common.Totales;
 
 import java.util.List;
@@ -36,7 +36,7 @@ public class NotaCreditoRequest {
     // Entidades relacionadas
     private Emisor emisor;
     private Cliente cliente;
-    private List<Item> items;
+    private List<Detalle> items;
     private Totales totales;
     
     // Getters y setters
@@ -168,11 +168,11 @@ public class NotaCreditoRequest {
         this.cliente = cliente;
     }
     
-    public List<Item> getItems() {
+    public List<Detalle> getItems() {
         return items;
     }
     
-    public void setItems(List<Item> items) {
+    public void setItems(List<Detalle> items) {
         this.items = items;
     }
     

@@ -1,10 +1,11 @@
 package com.nextia.serviciofacturacione.service;
 
+import com.nextia.serviciofacturacione.dto.FacturaRequest;
 import com.nextia.serviciofacturacione.model.Boleta;
 import com.nextia.serviciofacturacione.model.CdrResponse;
-import com.nextia.serviciofacturacione.model.Factura;
 import com.nextia.serviciofacturacione.model.NotaCredito;
 import com.nextia.serviciofacturacione.model.NotaDebito;
+import com.nextia.serviciofacturacione.model.common.Emisor;
 
 /**
  * Servicio principal para la gestión de comprobantes electrónicos
@@ -21,7 +22,7 @@ public interface ComprobanteService {
      * @param claveSol Clave SOL
      * @return Respuesta CDR de SUNAT
      */
-    CdrResponse enviarFactura(Factura factura, String ruc, String usuarioSol, String claveSol);
+    CdrResponse enviarFactura(FacturaRequest facturaRequest, Emisor emisor);
     
     /**
      * Envía una boleta electrónica a SUNAT
@@ -67,6 +68,5 @@ public interface ComprobanteService {
      * @param claveSol Clave SOL
      * @return Respuesta CDR de SUNAT
      */
-    CdrResponse consultarEstado(String ruc, String tipoDocumento, String serie, String numero, 
-                               String usuarioSol, String claveSol);
+    CdrResponse consultarEstado(Emisor emisor, String tipoDocumento, String serie, String numero);
 }

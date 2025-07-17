@@ -2,6 +2,7 @@ package com.nextia.serviciofacturacione.service.nota;
 
 import com.nextia.serviciofacturacione.model.CdrResponse;
 import com.nextia.serviciofacturacione.model.NotaDebito;
+import com.nextia.serviciofacturacione.model.common.Emisor;
 import com.nextia.serviciofacturacione.service.common.CdrProcessorService;
 import com.nextia.serviciofacturacione.service.sunat.SunatSenderService;
 import com.nextia.serviciofacturacione.service.common.XmlSignerService;
@@ -43,7 +44,8 @@ public class NotaDebitoServiceImpl implements NotaDebitoService {
     public byte[] generarXml(NotaDebito notaDebito) {
         try {
             log.info("Generando XML para nota de débito: {}-{}", notaDebito.getSerie(), notaDebito.getCorrelativo());
-            String xmlContent = ublGenerator.generateNotaDebitoXml(notaDebito);
+            //String xmlContent = ublGenerator.generateNotaDebitoXml(notaDebito);
+            String xmlContent = "";
             return xmlContent.getBytes(StandardCharsets.UTF_8);
         } catch (Exception e) {
             log.error("Error al generar XML de nota de débito", e);
@@ -83,12 +85,11 @@ public class NotaDebitoServiceImpl implements NotaDebitoService {
     }
     
     @Override
-    public CdrResponse consultarEstado(String ruc, String tipoDocumento, String serie, String numero, 
-                                      String usuarioSol, String claveSol) {
+    public CdrResponse consultarEstado(Emisor emisor, String tipoDocumento, String serie, String numero) {
         try {
             log.info("Consultando estado de nota de débito: {}-{}", serie, numero);
             // Usar método actualizado con credenciales inyectadas
-            byte[] respuestaBytes = sunatSenderService.consultarEstado(tipoDocumento, serie, numero);
+            byte[] respuestaBytes = sunatSenderService.consultarEstado(emisor, tipoDocumento, serie, numero);
             CdrResponse respuesta = cdrProcessorService.procesarXml(respuestaBytes);
             log.info("Consulta de estado de nota de débito {}-{} completada. Respuesta SUNAT: {}", 
                     serie, numero, respuesta.getCodigo());

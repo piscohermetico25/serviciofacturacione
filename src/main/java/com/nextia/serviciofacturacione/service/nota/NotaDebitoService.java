@@ -2,6 +2,7 @@ package com.nextia.serviciofacturacione.service.nota;
 
 import com.nextia.serviciofacturacione.model.CdrResponse;
 import com.nextia.serviciofacturacione.model.NotaDebito;
+import com.nextia.serviciofacturacione.model.common.Emisor;
 
 /**
  * Interfaz para el servicio de gestión de notas de débito electrónicas
@@ -35,6 +36,5 @@ public interface NotaDebitoService {
      * @param claveSol Clave SOL
      * @return Respuesta con el estado del documento
      */
-    CdrResponse consultarEstado(String ruc, String tipoDocumento, String serie, String numero, 
-                                String usuarioSol, String claveSol);
+    CdrResponse consultarEstado(Emisor emisor, String tipoDocumento, String serie, String numero);
 }
