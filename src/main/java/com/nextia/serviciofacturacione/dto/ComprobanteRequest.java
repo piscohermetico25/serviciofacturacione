@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * DTO para recibir la solicitud de emisión de una factura electrónica
  */
-public class FacturaRequest {
+public class ComprobanteRequest {
    
     Cliente cliente;
     Comprobante comprobante;

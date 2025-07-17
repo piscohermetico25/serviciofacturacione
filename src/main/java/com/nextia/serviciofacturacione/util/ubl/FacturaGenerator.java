@@ -28,8 +28,8 @@ public class FacturaGenerator {
      * @throws Exception Si ocurre un error en la generación del XML
      */
 
-     String UbLVersion="2.0";
-     String CustomizationID="1.0";
+     String UbLVersion="2.1";
+     String CustomizationID="2.0";
 
     public String crearXMLFactura(String nombreXml, Emisor emisor, Cliente cliente, Comprobante comprobante, List<Detalle> detalle) throws Exception {
         // Configuración segura para evitar XXE
