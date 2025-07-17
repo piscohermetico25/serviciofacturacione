@@ -7,8 +7,6 @@ import com.nextia.serviciofacturacione.model.CdrResponse;
 import com.nextia.serviciofacturacione.model.common.Emisor;
 
 public interface ComprobanteService {
-
-
     CdrResponse enviarFactura(ComprobanteRequest comprobanteRequest, Emisor emisor);
     CdrResponse enviarBoleta(ComprobanteRequest boletaRequest, Emisor emisor);
     CdrResponse enviarNotaCredito(ComprobanteRequest notaCreditoRequest, Emisor emisor);

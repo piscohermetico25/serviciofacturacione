@@ -14,12 +14,6 @@ public interface SunatSenderService {
     
     String enviarResumen(String nombreArchivo, byte[] contenidoZip);
     
-    String enviarLote(String nombreArchivo, byte[] contenidoZip);
-    
-    byte[] consultarTicket(String numeroTicket);
-    
-    byte[] consultarCdr(String tipoDocumento, String serie, String numero);
-    byte[] consultarEstadoAR(String tipoDocumento, String serie, String numero) ;
-    
+
 
 }

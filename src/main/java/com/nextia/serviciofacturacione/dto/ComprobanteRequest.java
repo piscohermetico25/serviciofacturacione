@@ -2,10 +2,7 @@ package com.nextia.serviciofacturacione.dto;
 
 import com.nextia.serviciofacturacione.model.common.Cliente;
 import com.nextia.serviciofacturacione.model.common.Comprobante;
-import com.nextia.serviciofacturacione.model.common.Emisor;
 import com.nextia.serviciofacturacione.model.common.Detalle;
-import com.nextia.serviciofacturacione.model.common.Totales;
-
 import java.util.List;
 
 /**

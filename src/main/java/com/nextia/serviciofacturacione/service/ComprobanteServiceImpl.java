@@ -47,15 +47,13 @@ public class ComprobanteServiceImpl implements ComprobanteService {
     public CdrResponse enviarFactura(ComprobanteRequest comprobanteRequest, Emisor emisor) {
         try {
 
-            log.info("Iniciando proceso de envío de factura: {}-{}", comprobanteRequest.getComprobante().getSerie(),
-                    comprobanteRequest.getComprobante().getCorrelativo());
             String TIPO_DOCUMENTO = "01";
-            // Generar nombre del archivo
+            // Paso 01 - Generar nombre del archivo
             String nombreArchivo = generarNombreArchivo(emisor.getRuc(), TIPO_DOCUMENTO,
                     comprobanteRequest.getComprobante().getSerie(),
                     comprobanteRequest.getComprobante().getCorrelativo());
 
-            // Paso 1: Generar XML
+            // Paso 02 - Generar XML
             byte[] xml;
             try {
                 xml = generacionXmlService.generarXml(TIPO_DOCUMENTO, nombreArchivo, emisor, comprobanteRequest);
@@ -64,6 +62,7 @@ public class ComprobanteServiceImpl implements ComprobanteService {
                 return new CdrResponse("9999", "Error al generar XML: " + e.getMessage());
             }
 
+            // Paso 03 - Guardar XML
             try {
                 guardarXmlEnDescargas(xml, nombreArchivo + ".xml");
             } catch (FacturacionException e) {
@@ -71,16 +70,16 @@ public class ComprobanteServiceImpl implements ComprobanteService {
                 return new CdrResponse("9999", "Error al guardar XML: " + e.getMessage());
             }
 
-            // Paso 2: Firmar XML
+            // Paso 04 - Firmar XML
             byte[] xmlFirmado = xmlSignerService.firmarXml(xml);
 
-            // Paso 3: Comprimir XML firmado a ZIP
+            // Paso 05 - Comprimir XML firmado a ZIP
             byte[] zip = zipCompressorService.comprimirXml(nombreArchivo + ".xml", xmlFirmado);
 
-            // Paso 4: Enviar ZIP a SUNAT (usando credenciales inyectadas)
+            // Paso 06 - Enviar ZIP a SUNAT (usando credenciales inyectadas)
             byte[] cdrZip = sunatSenderService.enviarArchivo(nombreArchivo + ".zip", zip);
 
-            // Paso 5: Procesar ZIP de CDR
+            // Paso 07 - Procesar ZIP de CDR
             CdrResponse respuesta = cdrProcessorService.procesarZip(cdrZip);
             log.info("Factura {}-{} enviada. Respuesta SUNAT: {}",
                     comprobanteRequest.getComprobante().getSerie(),
@@ -99,15 +98,13 @@ public class ComprobanteServiceImpl implements ComprobanteService {
     public CdrResponse enviarBoleta(ComprobanteRequest comprobanteRequest, Emisor emisor) {
         try {
 
-            log.info("Iniciando proceso de envío de factura: {}-{}", comprobanteRequest.getComprobante().getSerie(),
-                    comprobanteRequest.getComprobante().getCorrelativo());
             String TIPO_DOCUMENTO = "03";
-            // Generar nombre del archivo
+            // Paso 01 - Generar nombre del archivo
             String nombreArchivo = generarNombreArchivo(emisor.getRuc(), TIPO_DOCUMENTO,
                     comprobanteRequest.getComprobante().getSerie(),
                     comprobanteRequest.getComprobante().getCorrelativo());
 
-            // Paso 1: Generar XML
+            // Paso 02 - Generar XML
             byte[] xml;
             try {
                 xml = generacionXmlService.generarXml(TIPO_DOCUMENTO, nombreArchivo, emisor, comprobanteRequest);
@@ -116,6 +113,7 @@ public class ComprobanteServiceImpl implements ComprobanteService {
                 return new CdrResponse("9999", "Error al generar XML: " + e.getMessage());
             }
 
+            // Paso 03 - Guardar XML
             try {
                 guardarXmlEnDescargas(xml, nombreArchivo + ".xml");
             } catch (FacturacionException e) {
@@ -123,16 +121,16 @@ public class ComprobanteServiceImpl implements ComprobanteService {
                 return new CdrResponse("9999", "Error al guardar XML: " + e.getMessage());
             }
 
-            // Paso 2: Firmar XML
+            // Paso 04 - Firmar XML
             byte[] xmlFirmado = xmlSignerService.firmarXml(xml);
 
-            // Paso 3: Comprimir XML firmado a ZIP
+            // Paso 05 - Comprimir XML firmado a ZIP
             byte[] zip = zipCompressorService.comprimirXml(nombreArchivo + ".xml", xmlFirmado);
 
-            // Paso 4: Enviar ZIP a SUNAT (usando credenciales inyectadas)
+            // Paso 06 - Enviar ZIP a SUNAT (usando credenciales inyectadas)
             byte[] cdrZip = sunatSenderService.enviarArchivo(nombreArchivo + ".zip", zip);
 
-            // Paso 5: Procesar ZIP de CDR
+            // Paso 07 - Procesar ZIP de CDR
             CdrResponse respuesta = cdrProcessorService.procesarZip(cdrZip);
             log.info("Factura {}-{} enviada. Respuesta SUNAT: {}",
                     comprobanteRequest.getComprobante().getSerie(),
@@ -151,15 +149,13 @@ public class ComprobanteServiceImpl implements ComprobanteService {
     public CdrResponse enviarNotaCredito(ComprobanteRequest comprobanteRequest, Emisor emisor) {
         try {
 
-            log.info("Iniciando proceso de envío de factura: {}-{}", comprobanteRequest.getComprobante().getSerie(),
-                    comprobanteRequest.getComprobante().getCorrelativo());
             String TIPO_DOCUMENTO = "07";
-            // Generar nombre del archivo
+            // Paso 01 - Generar nombre del archivo
             String nombreArchivo = generarNombreArchivo(emisor.getRuc(), TIPO_DOCUMENTO,
                     comprobanteRequest.getComprobante().getSerie(),
                     comprobanteRequest.getComprobante().getCorrelativo());
 
-            // Paso 1: Generar XML
+            // Paso 02 - Generar XML
             byte[] xml;
             try {
                 xml = generacionXmlService.generarXml(TIPO_DOCUMENTO, nombreArchivo, emisor, comprobanteRequest);
@@ -168,6 +164,7 @@ public class ComprobanteServiceImpl implements ComprobanteService {
                 return new CdrResponse("9999", "Error al generar XML: " + e.getMessage());
             }
 
+            // Paso 03 - Guardar XML
             try {
                 guardarXmlEnDescargas(xml, nombreArchivo + ".xml");
             } catch (FacturacionException e) {
@@ -175,16 +172,16 @@ public class ComprobanteServiceImpl implements ComprobanteService {
                 return new CdrResponse("9999", "Error al guardar XML: " + e.getMessage());
             }
 
-            // Paso 2: Firmar XML
+            // Paso 04 - Firmar XML
             byte[] xmlFirmado = xmlSignerService.firmarXml(xml);
 
-            // Paso 3: Comprimir XML firmado a ZIP
+            // Paso 05 - Comprimir XML firmado a ZIP
             byte[] zip = zipCompressorService.comprimirXml(nombreArchivo + ".xml", xmlFirmado);
 
-            // Paso 4: Enviar ZIP a SUNAT (usando credenciales inyectadas)
+            // Paso 06 - Enviar ZIP a SUNAT (usando credenciales inyectadas)
             byte[] cdrZip = sunatSenderService.enviarArchivo(nombreArchivo + ".zip", zip);
 
-            // Paso 5: Procesar ZIP de CDR
+            // Paso 07 - Procesar ZIP de CDR
             CdrResponse respuesta = cdrProcessorService.procesarZip(cdrZip);
             log.info("Factura {}-{} enviada. Respuesta SUNAT: {}",
                     comprobanteRequest.getComprobante().getSerie(),
@@ -203,15 +200,13 @@ public class ComprobanteServiceImpl implements ComprobanteService {
     public CdrResponse enviarNotaDebito(ComprobanteRequest comprobanteRequest, Emisor emisor) {
         try {
 
-            log.info("Iniciando proceso de envío de factura: {}-{}", comprobanteRequest.getComprobante().getSerie(),
-                    comprobanteRequest.getComprobante().getCorrelativo());
             String TIPO_DOCUMENTO = "08";
-            // Generar nombre del archivo
+            // Paso 01 - Generar nombre del archivo
             String nombreArchivo = generarNombreArchivo(emisor.getRuc(), TIPO_DOCUMENTO,
                     comprobanteRequest.getComprobante().getSerie(),
                     comprobanteRequest.getComprobante().getCorrelativo());
 
-            // Paso 1: Generar XML
+            // Paso 02 - Generar XML
             byte[] xml;
             try {
                 xml = generacionXmlService.generarXml(TIPO_DOCUMENTO, nombreArchivo, emisor, comprobanteRequest);
@@ -220,6 +215,7 @@ public class ComprobanteServiceImpl implements ComprobanteService {
                 return new CdrResponse("9999", "Error al generar XML: " + e.getMessage());
             }
 
+            // Paso 03 - Guardar XML
             try {
                 guardarXmlEnDescargas(xml, nombreArchivo + ".xml");
             } catch (FacturacionException e) {
@@ -227,16 +223,16 @@ public class ComprobanteServiceImpl implements ComprobanteService {
                 return new CdrResponse("9999", "Error al guardar XML: " + e.getMessage());
             }
 
-            // Paso 2: Firmar XML
+            // Paso 04 - Firmar XML
             byte[] xmlFirmado = xmlSignerService.firmarXml(xml);
 
-            // Paso 3: Comprimir XML firmado a ZIP
+            // Paso 05 - Comprimir XML firmado a ZIP
             byte[] zip = zipCompressorService.comprimirXml(nombreArchivo + ".xml", xmlFirmado);
 
-            // Paso 4: Enviar ZIP a SUNAT (usando credenciales inyectadas)
+            // Paso 06 - Enviar ZIP a SUNAT (usando credenciales inyectadas)
             byte[] cdrZip = sunatSenderService.enviarArchivo(nombreArchivo + ".zip", zip);
 
-            // Paso 5: Procesar ZIP de CDR
+            // Paso 07 - Procesar ZIP de CDR
             CdrResponse respuesta = cdrProcessorService.procesarZip(cdrZip);
             log.info("Factura {}-{} enviada. Respuesta SUNAT: {}",
                     comprobanteRequest.getComprobante().getSerie(),
@@ -255,14 +251,13 @@ public class ComprobanteServiceImpl implements ComprobanteService {
     public CdrResponse enviarResumenDocumentos(ResumenDocumentosRequest request, Emisor emisor) {
         try {
 
-            log.info("Iniciando proceso de envío de factura: {}-{}", request.getCabecera().getSerie(),
-                    request.getCabecera().getCorrelativo());
             String TIPO_DOCUMENTO = "00";
-            // Generar nombre del archivo
+            // Paso 01 - Generar nombre del archivo
             String nombreArchivo = generarNombreArchivo(emisor.getRuc(), TIPO_DOCUMENTO,
-                    request.getCabecera().getSerie(), request.getCabecera().getCorrelativo());
+                    request.getCabecera().getSerie(),
+                    request.getCabecera().getCorrelativo());
 
-            // Paso 1: Generar XML
+            // Paso 02 - Generar XML
             byte[] xml;
             try {
                 xml = generacionXmlService.generarXml(nombreArchivo, emisor, request);
@@ -271,6 +266,7 @@ public class ComprobanteServiceImpl implements ComprobanteService {
                 return new CdrResponse("9999", "Error al generar XML: " + e.getMessage());
             }
 
+            // Paso 03 - Guardar XML
             try {
                 guardarXmlEnDescargas(xml, nombreArchivo + ".xml");
             } catch (FacturacionException e) {
@@ -278,19 +274,20 @@ public class ComprobanteServiceImpl implements ComprobanteService {
                 return new CdrResponse("9999", "Error al guardar XML: " + e.getMessage());
             }
 
-            // Paso 2: Firmar XML
+            // Paso 04 - Firmar XML
             byte[] xmlFirmado = xmlSignerService.firmarXml(xml);
 
-            // Paso 3: Comprimir XML firmado a ZIP
+            // Paso 05 - Comprimir XML firmado a ZIP
             byte[] zip = zipCompressorService.comprimirXml(nombreArchivo + ".xml", xmlFirmado);
 
-            // Paso 4: Enviar ZIP a SUNAT (usando credenciales inyectadas)
+            // Paso 06 - Enviar ZIP a SUNAT (usando credenciales inyectadas)
             byte[] cdrZip = sunatSenderService.enviarArchivo(nombreArchivo + ".zip", zip);
 
-            // Paso 5: Procesar ZIP de CDR
+            // Paso 07 - Procesar ZIP de CDR
             CdrResponse respuesta = cdrProcessorService.procesarZip(cdrZip);
             log.info("Factura {}-{} enviada. Respuesta SUNAT: {}",
-                    request.getCabecera().getSerie(), request.getCabecera().getCorrelativo(), respuesta.getCodigo());
+                    request.getCabecera().getSerie(),
+                    request.getCabecera().getCorrelativo(), respuesta.getCodigo());
 
             return respuesta;
         } catch (Exception e) {
@@ -305,14 +302,13 @@ public class ComprobanteServiceImpl implements ComprobanteService {
     public CdrResponse enviarBajaDocumentos(BajaDocumentosRequest request, Emisor emisor) {
         try {
 
-            log.info("Iniciando proceso de envío de baja de documentos: {}-{}", request.getCabecera().getSerie(),
-                    request.getCabecera().getCorrelativo());
             String TIPO_DOCUMENTO = "00";
-            // Generar nombre del archivo
+            // Paso 01 - Generar nombre del archivo
             String nombreArchivo = generarNombreArchivo(emisor.getRuc(), TIPO_DOCUMENTO,
-                    request.getCabecera().getSerie(), request.getCabecera().getCorrelativo());
+                    request.getCabecera().getSerie(),
+                    request.getCabecera().getCorrelativo());
 
-            // Paso 1: Generar XML
+            // Paso 02 - Generar XML
             byte[] xml;
             try {
                 xml = generacionXmlService.generarXml(nombreArchivo, emisor, request);
@@ -321,6 +317,7 @@ public class ComprobanteServiceImpl implements ComprobanteService {
                 return new CdrResponse("9999", "Error al generar XML: " + e.getMessage());
             }
 
+            // Paso 03 - Guardar XML
             try {
                 guardarXmlEnDescargas(xml, nombreArchivo + ".xml");
             } catch (FacturacionException e) {
@@ -328,19 +325,20 @@ public class ComprobanteServiceImpl implements ComprobanteService {
                 return new CdrResponse("9999", "Error al guardar XML: " + e.getMessage());
             }
 
-            // Paso 2: Firmar XML
+            // Paso 04 - Firmar XML
             byte[] xmlFirmado = xmlSignerService.firmarXml(xml);
 
-            // Paso 3: Comprimir XML firmado a ZIP
+            // Paso 05 - Comprimir XML firmado a ZIP
             byte[] zip = zipCompressorService.comprimirXml(nombreArchivo + ".xml", xmlFirmado);
 
-            // Paso 4: Enviar ZIP a SUNAT (usando credenciales inyectadas)
+            // Paso 06 - Enviar ZIP a SUNAT (usando credenciales inyectadas)
             byte[] cdrZip = sunatSenderService.enviarArchivo(nombreArchivo + ".zip", zip);
 
-            // Paso 5: Procesar ZIP de CDR
+            // Paso 07 - Procesar ZIP de CDR
             CdrResponse respuesta = cdrProcessorService.procesarZip(cdrZip);
             log.info("Factura {}-{} enviada. Respuesta SUNAT: {}",
-                    request.getCabecera().getSerie(), request.getCabecera().getCorrelativo(), respuesta.getCodigo());
+                    request.getCabecera().getSerie(),
+                    request.getCabecera().getCorrelativo(), respuesta.getCodigo());
 
             return respuesta;
         } catch (Exception e) {
