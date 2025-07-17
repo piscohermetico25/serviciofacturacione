@@ -1,11 +1,15 @@
 package com.nextia.serviciofacturacione.service;
 
+import com.nextia.serviciofacturacione.dto.BajaDocumentosRequest;
 import com.nextia.serviciofacturacione.dto.FacturaRequest;
+import com.nextia.serviciofacturacione.dto.ResumenDocumentosRequest;
 import com.nextia.serviciofacturacione.model.Boleta;
 import com.nextia.serviciofacturacione.model.CdrResponse;
 import com.nextia.serviciofacturacione.model.NotaCredito;
 import com.nextia.serviciofacturacione.model.NotaDebito;
 import com.nextia.serviciofacturacione.model.common.Emisor;
+import com.nextia.serviciofacturacione.service.resumen.ResumenDocumentosService;
+import com.nextia.serviciofacturacione.service.baja.BajaDocumentosService;
 import com.nextia.serviciofacturacione.service.boleta.BoletaService;
 import com.nextia.serviciofacturacione.service.factura.FacturaService;
 import com.nextia.serviciofacturacione.service.nota.NotaCreditoService;
@@ -36,6 +40,13 @@ public class ComprobanteServiceImpl implements ComprobanteService {
     
     @Autowired
     private NotaDebitoService notaDebitoService;
+
+    @Autowired
+    private ResumenDocumentosService resumenDocumentosService;
+
+    @Autowired
+    private BajaDocumentosService bajaDocumentosService;
+    
     
     @Override
     public CdrResponse enviarFactura(FacturaRequest facturaRequest, Emisor emisor) {
@@ -89,6 +100,34 @@ public class ComprobanteServiceImpl implements ComprobanteService {
         } catch (Exception e) {
             log.error("Error en el proceso de envío de nota de débito", e);
             CdrResponse errorResponse = new CdrResponse("9999", "Error en el proceso de envío de nota de débito: " + e.getMessage());
+            return errorResponse;
+        }
+    }
+    
+    @Override
+    public CdrResponse enviarResumenDocumentos(ResumenDocumentosRequest request, Emisor emisor) {
+        try {
+            log.info("Iniciando proceso de envío de resumen de documentos: {}-{}", request.getCabecera().getSerie(), request.getCabecera().getCorrelativo());
+            CdrResponse respuesta = resumenDocumentosService.enviarResumenDocumentos(request, emisor);
+            log.info("Proceso de envío de resumen de documentos completado. Código SUNAT: {}", respuesta.getCodigo());
+            return respuesta;
+        } catch (Exception e) {
+            log.error("Error en el proceso de envío de resumen de documentos", e);
+            CdrResponse errorResponse = new CdrResponse("9999", "Error en el proceso de envío de resumen de documentos: " + e.getMessage());
+            return errorResponse;
+        }
+    }
+
+    @Override
+    public CdrResponse enviarBajaDocumentos(BajaDocumentosRequest request, Emisor emisor) {
+        try {
+            log.info("Iniciando proceso de envío de baja de documentos: {}-{}", request.getCabecera().getSerie(), request.getCabecera().getCorrelativo());
+            CdrResponse respuesta = bajaDocumentosService.enviarBajaDocumentos(request, emisor);
+            log.info("Proceso de envío de baja de documentos completado. Código SUNAT: {}", respuesta.getCodigo());
+            return respuesta;
+        } catch (Exception e) {
+            log.error("Error en el proceso de envío de baja de documentos", e);
+            CdrResponse errorResponse = new CdrResponse("9999", "Error en el proceso de envío de baja de documentos: " + e.getMessage());
             return errorResponse;
         }
     }

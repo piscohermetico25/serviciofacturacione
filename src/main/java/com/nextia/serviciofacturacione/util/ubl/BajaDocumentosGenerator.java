@@ -1,6 +1,6 @@
 package com.nextia.serviciofacturacione.util.ubl;
 
-import com.nextia.serviciofacturacione.model.common.CabeceraResumenBaja;
+import com.nextia.serviciofacturacione.model.common.CabeceraResumen;
 import com.nextia.serviciofacturacione.model.common.DetalleResumen;
 import com.nextia.serviciofacturacione.model.common.Emisor;
 import org.w3c.dom.CDATASection;
@@ -16,12 +16,14 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
+import java.io.StringWriter;
 import java.nio.charset.StandardCharsets;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 
 public class BajaDocumentosGenerator {
-    public static void crearXMLBajaDocumentos(Emisor emisor, CabeceraResumenBaja cabecera, List<DetalleResumen> detalle, String nombreXml) throws Exception {
+    
+    public String crearXMLBajaDocumentos(Emisor emisor, CabeceraResumen cabecera, List<DetalleResumen> detalle, String nombreXml) throws Exception {
         DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
         dbf.setNamespaceAware(true);
         dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
@@ -156,15 +158,20 @@ public class BajaDocumentosGenerator {
         }
 
         // Guardar XML con UTF-8
+
+        // Guardar XML con UTF-8
+        // Al final, transformar el Document a String
         TransformerFactory tf = TransformerFactory.newInstance();
         Transformer transformer = tf.newTransformer();
         transformer.setOutputProperty(OutputKeys.ENCODING, "UTF-8");
-        transformer.setOutputProperty(OutputKeys.INDENT, "no");
-        DOMSource source = new DOMSource(doc);
-        try (FileOutputStream fos = new FileOutputStream(nombreXml + ".XML");
-             OutputStreamWriter writer = new OutputStreamWriter(fos, StandardCharsets.UTF_8)) {
-            StreamResult result = new StreamResult(writer);
-            transformer.transform(source, result);
-        }
+        transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+        StringWriter writer = new StringWriter();
+        transformer.transform(new DOMSource(doc), new StreamResult(writer));
+        String xmlString = writer.toString();
+
+        // (Opcional) Guardar el archivo en disco
+        // transformer.transform(new DOMSource(doc), new StreamResult(new File(nombreXml)));
+
+        return xmlString;
     }
 }

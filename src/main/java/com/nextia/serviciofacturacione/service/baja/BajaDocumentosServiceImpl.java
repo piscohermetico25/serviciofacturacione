@@ -1,18 +1,4 @@
-package com.nextia.serviciofacturacione.service.factura;
-
-import com.nextia.serviciofacturacione.dto.FacturaRequest;
-import com.nextia.serviciofacturacione.exception.FacturacionException;
-import com.nextia.serviciofacturacione.model.CdrResponse;
-import com.nextia.serviciofacturacione.model.common.Emisor;
-import com.nextia.serviciofacturacione.service.common.CdrProcessorService;
-import com.nextia.serviciofacturacione.service.sunat.SunatSenderService;
-import com.nextia.serviciofacturacione.service.common.XmlSignerService;
-import com.nextia.serviciofacturacione.service.common.ZipCompressorService;
-import com.nextia.serviciofacturacione.util.UblGenerator;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.springframework.stereotype.Service;
+package com.nextia.serviciofacturacione.service.baja;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -20,13 +6,26 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
-/**
- * Implementación del servicio para gestión de facturas electrónicas
- */
-@Service
-public class FacturaServiceImpl implements FacturaService {
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.nextia.serviciofacturacione.dto.BajaDocumentosRequest;
+import com.nextia.serviciofacturacione.dto.FacturaRequest;
+import com.nextia.serviciofacturacione.dto.ResumenDocumentosRequest;
+import com.nextia.serviciofacturacione.exception.FacturacionException;
+import com.nextia.serviciofacturacione.model.CdrResponse;
+import com.nextia.serviciofacturacione.model.common.Emisor;
+import com.nextia.serviciofacturacione.service.common.CdrProcessorService;
+import com.nextia.serviciofacturacione.service.common.XmlSignerService;
+import com.nextia.serviciofacturacione.service.common.ZipCompressorService;
+import com.nextia.serviciofacturacione.service.factura.FacturaServiceImpl;
+import com.nextia.serviciofacturacione.service.sunat.SunatSenderService;
+import com.nextia.serviciofacturacione.util.UblGenerator;
+
+public class BajaDocumentosServiceImpl implements BajaDocumentosService {
     
-    private static final Logger log = LoggerFactory.getLogger(FacturaServiceImpl.class);
+
+        private static final Logger log = LoggerFactory.getLogger(BajaDocumentosServiceImpl.class);
     private static final String TIPO_DOCUMENTO = "01"; // 01 = Factura
     
     private final UblGenerator ublGenerator;
@@ -35,7 +34,7 @@ public class FacturaServiceImpl implements FacturaService {
     private final SunatSenderService sunatSenderService;
     private final CdrProcessorService cdrProcessorService;
     
-    public FacturaServiceImpl(UblGenerator ublGenerator,
+    public BajaDocumentosServiceImpl(UblGenerator ublGenerator,
                              XmlSignerService xmlSignerService,
                              ZipCompressorService zipCompressorService,
                              SunatSenderService sunatSenderService,
@@ -48,31 +47,31 @@ public class FacturaServiceImpl implements FacturaService {
     }
     
     @Override
-    public byte[] generarXml(String nombreArchivo, Emisor emisor, FacturaRequest facturaRequest) {
+    public byte[] generarXml(String nombreArchivo, Emisor emisor, BajaDocumentosRequest request) {
         try {
-            log.info("Generando XML para factura: {}-{}", facturaRequest.getComprobante().getSerie(), facturaRequest.getComprobante().getCorrelativo());
-            String xmlContent = ublGenerator.generateFacturaXml(nombreArchivo,emisor, facturaRequest.getCliente(), facturaRequest.getComprobante(), facturaRequest.getDetalle());
+            log.info("Generando XML para baja de documentos: {}-{}", request.getCabecera().getSerie(), request.getCabecera().getCorrelativo());
+            String xmlContent = ublGenerator.generateBajaDocumentosXml(nombreArchivo,emisor, request);
             return xmlContent.getBytes(StandardCharsets.UTF_8);
         } catch (Exception e) {
-            String mensaje = String.format("Error al generar XML de factura %s-%s: %s", 
-                    facturaRequest.getComprobante().getSerie(), facturaRequest.getComprobante().getCorrelativo(), e.getMessage());
+            String mensaje = String.format("Error al generar XML de baja de documentos %s-%s: %s", 
+                    request.getCabecera().getSerie(), request.getCabecera().getCorrelativo(), e.getMessage());
             log.error(mensaje, e);
             throw new FacturacionException(mensaje, e);
         }
     }
     
     @Override
-    public CdrResponse enviarFactura(FacturaRequest facturaRequest, Emisor emisor) {
+    public CdrResponse enviarBajaDocumentos(BajaDocumentosRequest request, Emisor emisor) {
         try {
-            log.info("Iniciando proceso de envío de factura: {}-{}", facturaRequest.getComprobante().getSerie(), facturaRequest.getComprobante().getCorrelativo());
+            log.info("Iniciando proceso de envío de baja de documentos: {}-{}", request.getCabecera().getSerie(), request.getCabecera().getCorrelativo());
             
             // Generar nombre del archivo
-            String nombreArchivo = generarNombreArchivo(emisor.getRuc(), TIPO_DOCUMENTO, facturaRequest.getComprobante().getSerie(), facturaRequest.getComprobante().getCorrelativo());
+            String nombreArchivo = generarNombreArchivo(emisor.getRuc(), TIPO_DOCUMENTO, request.getCabecera().getSerie(), request.getCabecera().getCorrelativo());
 
             // Paso 1: Generar XML
             byte[] xml;
             try {
-                xml = generarXml(nombreArchivo, emisor, facturaRequest);
+                xml = generarXml(nombreArchivo, emisor, request);
             } catch (FacturacionException e) {
                 log.error("Error al generar XML: {}", e.getMessage(), e);
                 return new CdrResponse("9999", "Error al generar XML: " + e.getMessage());
@@ -98,17 +97,17 @@ public class FacturaServiceImpl implements FacturaService {
             // Paso 5: Procesar ZIP de CDR
             CdrResponse respuesta = cdrProcessorService.procesarZip(cdrZip);
             log.info("Factura {}-{} enviada. Respuesta SUNAT: {}", 
-                    facturaRequest.getComprobante().getSerie(), facturaRequest.getComprobante().getCorrelativo(), respuesta.getCodigo());
+                    request.getCabecera().getSerie(), request.getCabecera().getCorrelativo(), respuesta.getCodigo());
             
             return respuesta;
         } catch (FacturacionException e) {
             String mensaje = String.format("Error al enviar factura %s-%s a SUNAT: %s", 
-                    facturaRequest.getComprobante().getSerie(), facturaRequest.getComprobante().getCorrelativo(), e.getMessage());
+                    request.getCabecera().getSerie(), request.getCabecera().getCorrelativo(), e.getMessage());
             log.error(mensaje, e);
             return new CdrResponse("9999", mensaje);
         } catch (Exception e) {
             String mensaje = String.format("Error inesperado al enviar factura %s-%s a SUNAT: %s", 
-                    facturaRequest.getComprobante().getSerie(), facturaRequest.getComprobante().getCorrelativo(), e.getMessage());
+                    request.getCabecera().getSerie(), request.getCabecera().getCorrelativo(), e.getMessage());
             log.error(mensaje, e);
             return new CdrResponse("9999", mensaje);
         }
@@ -182,5 +181,6 @@ public class FacturaServiceImpl implements FacturaService {
             throw new FacturacionException(mensaje, e);
         }
     }
+
 
 }

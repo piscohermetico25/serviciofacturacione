@@ -2,7 +2,7 @@ package com.nextia.serviciofacturacione.model.common;
 
 import java.time.LocalDate;
 
-public class CabeceraResumenBaja {
+public class CabeceraResumen {
        private String tipoDoc; // RC (Resumen), RA (Baja)
     private String serie; // Formato YYYYMMDD
     private String correlativo; // Correlativo del día (1, 2, 3...)

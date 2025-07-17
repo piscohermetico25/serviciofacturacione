@@ -61,8 +61,8 @@ public class FacturaGenerator {
         invoice.appendChild(extUBLExtensions);
 
         // UBLVersionID, CustomizationID, ID, IssueDate, IssueTime, DueDate, InvoiceTypeCode, Note, DocumentCurrencyCode
-        appendTextElement(doc, invoice, "cbc:UBLVersionID", "2.1");
-        appendTextElement(doc, invoice, "cbc:CustomizationID", "2.0");
+        appendTextElement(doc, invoice, "cbc:UBLVersionID", UbLVersion);
+        appendTextElement(doc, invoice, "cbc:CustomizationID", CustomizationID);
         appendTextElement(doc, invoice, "cbc:ID", comprobante.getSerie() + "-" + comprobante.getCorrelativo());
         appendTextElement(doc, invoice, "cbc:IssueDate", comprobante.getFechaEmision().toString());
         appendTextElement(doc, invoice, "cbc:IssueTime", "00:00:00");

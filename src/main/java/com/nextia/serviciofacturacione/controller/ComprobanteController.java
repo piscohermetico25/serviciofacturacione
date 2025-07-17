@@ -1,10 +1,12 @@
 package com.nextia.serviciofacturacione.controller;
 
+import com.nextia.serviciofacturacione.dto.BajaDocumentosRequest;
 import com.nextia.serviciofacturacione.dto.BoletaRequest;
 import com.nextia.serviciofacturacione.dto.CdrResponseDto;
 import com.nextia.serviciofacturacione.dto.FacturaRequest;
 import com.nextia.serviciofacturacione.dto.NotaCreditoRequest;
 import com.nextia.serviciofacturacione.dto.NotaDebitoRequest;
+import com.nextia.serviciofacturacione.dto.ResumenDocumentosRequest;
 import com.nextia.serviciofacturacione.model.Boleta;
 import com.nextia.serviciofacturacione.model.CdrResponse;
 import com.nextia.serviciofacturacione.model.NotaCredito;
@@ -162,6 +164,30 @@ public class ComprobanteController {
         return ResponseEntity.ok(responseDto);
     }
     
+    /**
+     * Endpoint para enviar un Resumen de Documentos a SUNAT
+     */
+    @PostMapping("/resumen-documentos")
+    public ResponseEntity<CdrResponseDto> enviarResumenDocumentos(@RequestBody ResumenDocumentosRequest request) {
+        log.info("Recibida solicitud para enviar resumen de documentos: {}-{}", request.getCabecera().getSerie(), request.getCabecera().getCorrelativo());
+        Emisor emisor = emisorService.obtenerEmisor();
+        CdrResponse respuesta = comprobanteService.enviarResumenDocumentos(request, emisor);
+        CdrResponseDto responseDto = convertirRespuesta(respuesta);
+        return ResponseEntity.ok(responseDto);
+    }
+
+    /**
+     * Endpoint para enviar una Baja de Documentos a SUNAT
+     */
+    @PostMapping("/baja-documentos")
+    public ResponseEntity<CdrResponseDto> enviarBajaDocumentos(@RequestBody BajaDocumentosRequest request) {
+        log.info("Recibida solicitud para enviar baja de documentos: {}-{}", request.getCabecera().getSerie(), request.getCabecera().getCorrelativo());
+        Emisor emisor = emisorService.obtenerEmisor();
+        CdrResponse respuesta = comprobanteService.enviarBajaDocumentos(request, emisor);
+        CdrResponseDto responseDto = convertirRespuesta(respuesta);
+        return ResponseEntity.ok(responseDto);
+    }
+
     /**
      * Convierte la respuesta del modelo a DTO
      */
