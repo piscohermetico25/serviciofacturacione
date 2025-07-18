@@ -36,7 +36,7 @@ public class ComprobanteController {
     @PostMapping("/boleta")
     public ResponseEntity<CdrResponseDto> enviarBoleta(@RequestBody ComprobanteRequest request) {
         Emisor emisor = emisorService.obtenerEmisor();
-        CdrResponse respuesta = comprobanteService.enviarFactura(request, emisor);
+        CdrResponse respuesta = comprobanteService.enviarBoleta(request, emisor);
         CdrResponseDto responseDto = convertirRespuesta(respuesta);
         return ResponseEntity.ok(responseDto);
     }
